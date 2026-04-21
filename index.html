@@ -40,23 +40,7 @@
   .summary-value { font-weight: bold; color: #007bff; }
   .summary-value.warning { color: #dc3545; }
 
-  /* 优化后的添加按钮样式 */
-  .btn-big-add { 
-    width: 54px; 
-    height: 40px; /* 限制高度，使其与左侧两行文字对齐 */
-    background: #007bff; 
-    color: #fff; 
-    border: none; 
-    font-size: 14px; 
-    font-weight: bold; 
-    cursor: pointer; 
-    display: flex; 
-    align-items: center; 
-    justify-content: center; 
-    border-radius: 6px;
-    margin-right: 10px;
-    flex-shrink: 0;
-  }
+  .btn-big-add { width: 54px; height: 40px; background: #007bff; color: #fff; border: none; font-size: 14px; font-weight: bold; cursor: pointer; display: flex; align-items: center; justify-content: center; border-radius: 6px; margin-right: 10px; flex-shrink: 0; }
   .btn-big-add:active { background: #0056b3; }
 
   #addPhonePanel { display: none; padding: 10px 12px; background: #fff; border-bottom: 1px solid #eee; animation: slideDown 0.2s ease-out; }
@@ -89,7 +73,21 @@
     overflow: visible; position: relative; user-select: none; -webkit-user-select: none;
   }
   .mgmt-card.active { background: #e7f3ff; border-color: #007bff; }
-  .mgmt-card-phone { font-weight: bold; font-size: 12px; color: #007bff; pointer-events: none; flex: 1; text-align: left; }
+  .mgmt-card-phone { font-weight: bold; font-size: 12px; color: #007bff; pointer-events: none; flex: 0 1 auto; text-align: left; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-right: 4px; }
+
+  /* 外层天数方框样式 - 在空白区域居中 */
+  .mgmt-card-days-container {
+    flex: 1; /* 占据中间所有剩余空间 */
+    display: flex;
+    justify-content: center; /* 在剩余空间内水平居中 */
+    align-items: center;
+    pointer-events: none;
+  }
+  .mgmt-card-days-box {
+    border: 1px solid #007bff; color: #007bff; font-size: 10px; padding: 0 4px; border-radius: 3px;
+    height: 18px; line-height: 16px; font-weight: bold;
+  }
+  .mgmt-card-days-box.warning { border-color: #dc3545; color: #dc3545; }
 
   .mgmt-card-stats { display: flex; align-items: center; gap: 2px; font-size: 10px; font-weight: bold; pointer-events: none; }
   .stat-mac { color: #007bff; }
@@ -112,7 +110,9 @@
   .mgmt-detail-area.active { display: block; }
 
   .mgmt-detail-header { display: flex; justify-content: space-between; align-items: center; padding: 8px 12px; border-bottom: 1px solid #f0f0f0; }
+  .mgmt-detail-title-wrap { display: flex; align-items: center; gap: 8px; }
   .mgmt-detail-title { font-weight: bold; font-size: 14px; color: #333; }
+  .mgmt-detail-expiry { font-size: 11px; color: #666; display: flex; align-items: center; gap: 3px; }
   .mgmt-detail-btns { display: flex; gap: 6px; }
   .detail-action-btn { font-size: 11px; padding: 2px 8px; border-radius: 4px; border: none; color: #fff; cursor: pointer; font-weight: bold; }
 
@@ -121,7 +121,6 @@
   .mgmt-detail-table th { background: #fafafa; color: #888; font-weight: bold; }
   .mgmt-detail-table td { vertical-align: middle; }
   
-  /* 列宽分配 */
   .col-nickname { width: 28%; }
   .col-device { width: 22%; }
   .col-system { width: 10%; }
@@ -139,7 +138,6 @@
 
 <!-- 登录遮罩层 -->
 <div id="loginOverlay">
-  <!-- 统计面板前置 -->
   <div class="summary-panel" id="publicSummary">
     <div class="summary-main">
       <div class="summary-content">
@@ -168,11 +166,8 @@
 </div>
 
 <div class="container" id="mainContainer">
-  <!-- 登录后的统计面板 -->
   <div class="summary-panel">
-    <div class="summary-main" id="privateSummaryPlaceholder">
-      <!-- 这里的内容会由脚本同步 -->
-    </div>
+    <div class="summary-main" id="privateSummaryPlaceholder"></div>
     <button class="btn-big-add" id="btnAddPhone" style="display:none;" onclick="toggleAddPhonePanel()">添加</button>
   </div>
 
@@ -202,41 +197,31 @@ let expandedPhone = null;
 let currentSelectedSystem = "";
 let phoneOrder = [];
 
-// 登录验证
 function checkLogin() {
   const input = document.getElementById('loginPwd').value;
   const savedPwd = localStorage.getItem('appPassword') || 'qq';
   if (input === savedPwd) {
     document.getElementById('loginOverlay').style.display = 'none';
     document.getElementById('mainContainer').style.display = 'block';
-    // 登录后将统计面板移回主容器
     const summary = document.getElementById('publicSummary');
     const placeholder = document.getElementById('privateSummaryPlaceholder');
     placeholder.appendChild(summary);
-    
-    // 显示添加按钮
     document.getElementById('btnAddPhone').style.display = 'flex';
-    
-    // 登录后将到期列表容器也移回
     const expList = document.getElementById('expiringListContainer');
     document.getElementById('mainContainer').insertBefore(expList, document.getElementById('addPhonePanel'));
-    
     renderMgmtGrid();
   } else {
     alert('密码错误');
   }
 }
 
-// 修改密码
 function changePassword() {
   const oldPwd = localStorage.getItem('appPassword') || 'qq';
   const inputOld = prompt('请输入当前密码：');
   if (inputOld === null) return;
   if (inputOld !== oldPwd) return alert('当前密码错误');
-  
   const newPwd = prompt('请输入新密码：');
   if (!newPwd) return alert('新密码不能为空');
-  
   localStorage.setItem('appPassword', newPwd);
   alert('密码修改成功，请牢记新密码！');
 }
@@ -313,13 +298,18 @@ function renderMgmtGrid() {
       badgeHtml = `<div class="mgmt-card-badge ${badgeClass}">${minDays}</div>`;
     }
 
+    // 手机号和统计之间的天数方框容器
+    const daysBoxHtml = minDays !== Infinity ? 
+      `<div class="mgmt-card-days-container"><div class="mgmt-card-days-box ${minDays <= 7 ? 'warning' : ''}">${minDays}天</div></div>` : 
+      `<div class="mgmt-card-days-container"></div>`;
+
     const statsHtml = `<div class="mgmt-card-stats">
       <span class="stat-win">${winCount}</span>
       <span class="stat-sep">/</span>
       <span class="stat-mac">${macCount}</span>
     </div>`;
 
-    card.innerHTML = `<div class="mgmt-card-phone">${phone}</div>${statsHtml}${badgeHtml}`;
+    card.innerHTML = `<div class="mgmt-card-phone">${phone}</div>${daysBoxHtml}${statsHtml}${badgeHtml}`;
     
     card.onclick = (e) => {
       if (card.classList.contains('dragging')) return;
@@ -376,9 +366,19 @@ function renderMgmtGrid() {
     if (phone === expandedPhone) {
       const detailArea = document.createElement('div');
       detailArea.className = 'mgmt-detail-area active';
+      
+      // 计算该手机号的最早到期日期
+      let earliestDateStr = '-';
+      if (minDays !== Infinity) {
+        earliestDateStr = calculateDate(minDays);
+      }
+
       detailArea.innerHTML = `
         <div class="mgmt-detail-header">
-          <div class="mgmt-detail-title">${phone}</div>
+          <div class="mgmt-detail-title-wrap">
+            <div class="mgmt-detail-title">${phone}</div>
+            <div class="mgmt-detail-expiry">📅 ${earliestDateStr}</div>
+          </div>
           <div class="mgmt-detail-btns">
             <button class="detail-action-btn" style="background:#28a745;" onclick="showItemForm('${phone}')">添加明细</button>
             <button class="detail-action-btn" style="background:#dc3545;" onclick="deleteFullPhone('${phone}')">删除号码</button>
@@ -484,13 +484,15 @@ function calculateDate(days) {
   if (!days) return '-';
   const date = new Date();
   date.setDate(date.getDate() + parseInt(days));
-  return date.toLocaleDateString('zh-CN', { year: '2-digit', month: '2-digit', day: '2-digit' }).replace(/\//g, '.');
+  const y = date.getFullYear().toString().slice(-2);
+  const m = date.getMonth() + 1;
+  const d = date.getDate();
+  return `${y}.${m}.${d}`;
 }
 
 function updateSummary() {
   const phones = Object.keys(mgmtData);
   const totalPhonesText = phones.length + '个';
-  
   let totalValid = 0, totalInvalid = 0, expiringCount = 0;
   let expiringHtml = '<div class="expiring-grid">';
   phones.forEach(phone => {
@@ -509,15 +511,9 @@ function updateSummary() {
       }
     });
   });
-
-  const statusStatsText = `有效 ${totalValid} / 失效 ${totalInvalid}`;
-  const expiringCountText = `${expiringCount}个 (点击查看)`;
-
-  // 同步更新公开和私有面板
   document.getElementById('totalPhones_pub').innerText = totalPhonesText;
-  document.getElementById('statusStats_pub').innerText = statusStatsText;
-  document.getElementById('expiringCount_pub').innerText = expiringCountText;
-  
+  document.getElementById('statusStats_pub').innerText = `有效 ${totalValid} / 失效 ${totalInvalid}`;
+  document.getElementById('expiringCount_pub').innerText = `${expiringCount}个 (点击查看)`;
   document.getElementById('expiringListContainer').innerHTML = expiringHtml + '</div>';
 }
 
@@ -531,6 +527,11 @@ function showItemForm(phone, idx = -1) {
   const item = isEdit ? mgmtData[phone].items[idx] : { nickname: '', device: '', days: '', system: '' };
   currentSelectedSystem = item.system || "";
   
+  // 预计算当前日期
+  const today = new Date();
+  const currentExpiryDate = item.days ? new Date(today.getTime() + parseInt(item.days) * 86400000) : today;
+  const dateStr = currentExpiryDate.toISOString().split('T')[0];
+
   const formContainer = document.createElement('div');
   formContainer.id = 'itemFormContainer';
   formContainer.style.cssText = 'position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); display:flex; justify-content:center; align-items:center; z-index:99999;';
@@ -540,31 +541,35 @@ function showItemForm(phone, idx = -1) {
         <h3 style="margin:0; font-size:18px;">${isEdit ? '编辑明细' : '添加明细'}</h3>
         <span style="cursor:pointer; font-size:24px; color:#999;" onclick="document.getElementById('itemFormContainer').remove()">×</span>
       </div>
-      <div style="margin-bottom:12px;">
-        <label style="display:block; font-size:12px; color:#666; margin-bottom:4px;">昵称</label>
-        <input type="text" id="formNickname" value="${item.nickname}" style="width:100%; height:38px; padding:0 10px; border:1px solid #ddd; border-radius:6px; outline:none;">
+      <div style="margin-bottom:10px;">
+        <label style="display:block; font-size:11px; color:#666; margin-bottom:2px;">昵称</label>
+        <input type="text" id="formNickname" value="${item.nickname}" style="width:100%; height:34px; padding:0 10px; border:1px solid #ddd; border-radius:6px; outline:none;">
       </div>
-      <div style="margin-bottom:12px;">
-        <label style="display:block; font-size:12px; color:#666; margin-bottom:4px;">设备</label>
-        <input type="text" id="formDevice" value="${item.device}" placeholder="如: 1号机" style="width:100%; height:38px; padding:0 10px; border:1px solid #ddd; border-radius:6px; outline:none;">
+      <div style="margin-bottom:10px;">
+        <label style="display:block; font-size:11px; color:#666; margin-bottom:2px;">设备</label>
+        <input type="text" id="formDevice" value="${item.device}" placeholder="如: 1号机" style="width:100%; height:34px; padding:0 10px; border:1px solid #ddd; border-radius:6px; outline:none;">
       </div>
-      <div style="margin-bottom:12px;">
-        <label style="display:block; font-size:12px; color:#666; margin-bottom:6px;">系统</label>
-        <div style="display:flex; gap:12px;">
-          <button class="quick-btn ${currentSelectedSystem === 'Win' ? 'active' : ''}" onclick="selectSystem('Win')" style="flex:1; height:34px; border:1px solid #007bff; background:#fff; color:#007bff; border-radius:4px;">Win</button>
-          <button class="quick-btn ${currentSelectedSystem === 'Mac' ? 'active' : ''}" onclick="selectSystem('Mac')" style="flex:1; height:34px; border:1px solid #007bff; background:#fff; color:#007bff; border-radius:4px;">Mac</button>
+      <div style="margin-bottom:10px;">
+        <label style="display:block; font-size:11px; color:#666; margin-bottom:4px;">系统</label>
+        <div style="display:flex; gap:10px;">
+          <button class="quick-btn ${currentSelectedSystem === 'Win' ? 'active' : ''}" onclick="selectSystem('Win')" style="flex:1; height:30px; border:1px solid #007bff; background:#fff; color:#007bff; border-radius:4px; font-size:12px;">Win</button>
+          <button class="quick-btn ${currentSelectedSystem === 'Mac' ? 'active' : ''}" onclick="selectSystem('Mac')" style="flex:1; height:30px; border:1px solid #007bff; background:#fff; color:#007bff; border-radius:4px; font-size:12px;">Mac</button>
         </div>
       </div>
-      <div style="margin-bottom:20px;">
-        <label style="display:block; font-size:12px; color:#666; margin-bottom:4px;">剩余天数</label>
+      <div style="margin-bottom:10px;">
+        <label style="display:block; font-size:11px; color:#666; margin-bottom:2px;">本号到期日期</label>
+        <input type="date" id="formExpiryDate" value="${dateStr}" onchange="syncDaysFromDate()" style="width:100%; height:34px; padding:0 10px; border:1px solid #ddd; border-radius:6px; outline:none;">
+      </div>
+      <div style="margin-bottom:15px;">
+        <label style="display:block; font-size:11px; color:#666; margin-bottom:2px;">剩余天数</label>
         <div style="display:flex; gap:8px;">
-          <input type="number" id="formDays" value="${item.days}" style="width:50%; height:38px; padding:0 10px; border:1px solid #ddd; border-radius:6px; outline:none;">
-          <button class="quick-btn" onclick="addMonth()" style="height:38px; padding:0 12px; border:1px solid #007bff; background:#fff; color:#007bff; border-radius:4px;">月卡 (+30)</button>
+          <input type="number" id="formDays" value="${item.days}" oninput="syncDateFromDays()" style="width:50%; height:34px; padding:0 10px; border:1px solid #ddd; border-radius:6px; outline:none;">
+          <button class="quick-btn" onclick="addMonth()" style="height:34px; padding:0 10px; border:1px solid #007bff; background:#fff; color:#007bff; border-radius:4px; font-size:12px;">+30天</button>
         </div>
       </div>
       <div style="display:flex; gap:10px;">
-        ${isEdit ? `<button onclick="handleItemAction('${phone}', ${idx}, 'delete'); document.getElementById('itemFormContainer').remove();" style="flex:1; height:44px; background:#dc3545; color:#fff; border:none; border-radius:6px; font-weight:bold; font-size:16px; cursor:pointer;">删除</button>` : ''}
-        <button onclick="saveItem('${phone}', ${idx})" style="flex:2; height:44px; background:#007bff; color:#fff; border:none; border-radius:6px; font-weight:bold; font-size:16px; cursor:pointer;">保存</button>
+        ${isEdit ? `<button onclick="handleItemAction('${phone}', ${idx}, 'delete'); document.getElementById('itemFormContainer').remove();" style="flex:1; height:40px; background:#dc3545; color:#fff; border:none; border-radius:6px; font-weight:bold; font-size:14px; cursor:pointer;">删除</button>` : ''}
+        <button onclick="saveItem('${phone}', ${idx})" style="flex:2; height:40px; background:#007bff; color:#fff; border:none; border-radius:6px; font-weight:bold; font-size:14px; cursor:pointer;">保存</button>
       </div>
     </div>
   `;
@@ -572,25 +577,47 @@ function showItemForm(phone, idx = -1) {
   if(currentSelectedSystem) selectSystem(currentSelectedSystem);
 }
 
+function syncDaysFromDate() {
+  const dateVal = document.getElementById('formExpiryDate').value;
+  if (!dateVal) return;
+  const targetDate = new Date(dateVal);
+  const today = new Date();
+  today.setHours(0,0,0,0);
+  targetDate.setHours(0,0,0,0);
+  const diffTime = targetDate - today;
+  const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+  document.getElementById('formDays').value = diffDays;
+}
+
+function syncDateFromDays() {
+  const days = parseInt(document.getElementById('formDays').value) || 0;
+  const today = new Date();
+  const targetDate = new Date(today.getTime() + days * 86400000);
+  document.getElementById('formExpiryDate').value = targetDate.toISOString().split('T')[0];
+}
+
 function selectSystem(sys) {
   currentSelectedSystem = sys;
   document.querySelectorAll('#itemFormContainer .quick-btn').forEach(btn => {
-    const isMatch = btn.innerText === sys;
-    btn.style.background = isMatch ? '#007bff' : '#fff';
-    btn.style.color = isMatch ? '#fff' : '#007bff';
+    if (btn.innerText === 'Win' || btn.innerText === 'Mac') {
+      const isMatch = btn.innerText === sys;
+      btn.style.background = isMatch ? '#007bff' : '#fff';
+      btn.style.color = isMatch ? '#fff' : '#007bff';
+    }
   });
 }
 
 function addMonth() {
   const input = document.getElementById('formDays');
   input.value = (parseInt(input.value) || 0) + 30;
+  syncDateFromDays();
 }
 
 function saveItem(phone, idx) {
   const nickname = document.getElementById('formNickname').value.trim();
   const device = document.getElementById('formDevice').value.trim();
   const days = document.getElementById('formDays').value.trim();
-  if (!days) return alert('请输入天数');
+  if (!days) return alert('请输入天数或选择日期');
   const newItem = { nickname, device, days, system: currentSelectedSystem, deleted: false };
   if (idx === -1) mgmtData[phone].items.push(newItem);
   else mgmtData[phone].items[idx] = newItem;
