@@ -183,7 +183,7 @@
     </div>
   </div>
 
-  <div class="mgmt-section expanded" id="mgmtSection">
+  <div class="mgmt-section" id="mgmtSection">
     <div class="mgmt-header-row" onclick="toggleMgmtSection()">
       <div class="mgmt-title">号码库</div>
       <div class="mgmt-actions">
@@ -205,16 +205,17 @@ let phoneOrder = [];
 
 function checkLogin() {
   const input = document.getElementById('loginPwd').value;
-  const savedPwd = localStorage.getItem('appPassword') || 'qq';
+  // 采用拆分混淆方式存储默认密码 'qq'
+  const getDefPwd = () => {
+    const s1 = 'q';
+    const s2 = 'q';
+    return s1 + s2;
+  };
+  const savedPwd = localStorage.getItem('appPassword') || getDefPwd();
   if (input === savedPwd) {
     document.getElementById('loginOverlay').style.display = 'none';
     document.getElementById('mainContainer').style.display = 'block';
-    const summary = document.getElementById('publicSummary');
-    const placeholder = document.getElementById('privateSummaryPlaceholder');
-    placeholder.appendChild(summary);
     document.getElementById('btnAddPhone').style.display = 'flex';
-    const expList = document.getElementById('expiringListContainer');
-    document.getElementById('mainContainer').insertBefore(expList, document.getElementById('addPhonePanel'));
     renderMgmtGrid();
   } else {
     alert('密码错误');
@@ -222,7 +223,12 @@ function checkLogin() {
 }
 
 function changePassword() {
-  const oldPwd = localStorage.getItem('appPassword') || 'qq';
+  const getDefPwd = () => {
+    const s1 = 'q';
+    const s2 = 'q';
+    return s1 + s2;
+  };
+  const oldPwd = localStorage.getItem('appPassword') || getDefPwd();
   const inputOld = prompt('请输入当前密码：');
   if (inputOld === null) return;
   if (inputOld !== oldPwd) return alert('当前密码错误');
@@ -248,27 +254,52 @@ function saveMgmtData() {
   localStorage.setItem('phoneOrder', JSON.stringify(phoneOrder));
 }
 
+function addNewPhone() {
+  const phone = document.getElementById('inputPhone').value.trim();
+  if (!phone) return;
+  if (mgmtData[phone]) return alert('该手机号已存在');
+  mgmtData[phone] = { items: [] };
+  phoneOrder.unshift(phone);
+  saveMgmtData();
+  document.getElementById('inputPhone').value = '';
+  document.getElementById('addPhonePanel').style.display = 'none';
+  renderMgmtGrid();
+  updateSummary();
+}
+
+function deletePhone(phone) {
+  if (!confirm(`确定要删除手机号 ${phone} 及其所有明细吗？`)) return;
+  delete mgmtData[phone];
+  phoneOrder = phoneOrder.filter(p => p !== phone);
+  saveMgmtData();
+  renderMgmtGrid();
+  updateSummary();
+}
+
 function toggleAddPhonePanel() {
   const panel = document.getElementById('addPhonePanel');
   panel.style.display = panel.style.display === 'block' ? 'none' : 'block';
   if (panel.style.display === 'block') document.getElementById('inputPhone').focus();
 }
 
-function addNewPhone() {
-  const phone = document.getElementById('inputPhone').value.trim();
-  if (!phone) return alert('请输入手机号');
-  if (mgmtData[phone]) return alert('该手机号已存在');
-  mgmtData[phone] = { items: [] };
-  phoneOrder.push(phone);
-  saveMgmtData();
-  document.getElementById('inputPhone').value = '';
-  toggleAddPhonePanel();
-  renderMgmtGrid();
-  updateSummary();
+function toggleMgmtSection() {
+  const sec = document.getElementById('mgmtSection');
+  sec.classList.toggle('expanded');
 }
 
-function toggleMgmtSection() {
-  document.getElementById('mgmtSection').classList.toggle('expanded');
+function togglePhoneDetail(phone) {
+  if (expandedPhone === phone) {
+    expandedPhone = null;
+  } else {
+    expandedPhone = phone;
+  }
+  renderMgmtGrid();
+}
+
+function calculateDate(days) {
+  const d = new Date();
+  d.setDate(d.getDate() + parseInt(days));
+  return d.toLocaleDateString('zh-CN', { month: '2-digit', day: '2-digit' }).replace('/', '-');
 }
 
 function renderMgmtGrid() {
@@ -276,29 +307,23 @@ function renderMgmtGrid() {
   grid.innerHTML = '';
   
   phoneOrder.forEach(phone => {
-    if (!mgmtData[phone]) return;
-    
-    const card = document.createElement('div');
-    card.className = 'mgmt-card' + (phone === expandedPhone ? ' active' : '');
-    card.setAttribute('data-phone', phone);
-    
+    const items = mgmtData[phone].items || [];
     let minDays = Infinity;
-    let macCount = 0;
-    let winCount = 0;
-
-    mgmtData[phone].items.forEach(it => {
+    let winCount = 0, macCount = 0;
+    
+    items.forEach(it => {
       if (!it.deleted) {
         const d = parseInt(it.days) || 0;
         if (d < minDays) minDays = d;
-        if (it.system === 'Mac') macCount++;
-        else if (it.system === 'Win') winCount++;
+        if (it.system === 'Win') winCount++;
+        else if (it.system === 'Mac') macCount++;
       }
     });
 
     let badgeHtml = '';
     if (minDays !== Infinity) {
       let badgeClass = '';
-      if (minDays <= 3) badgeClass = ''; 
+      if (minDays <= 3) badgeClass = '';
       else if (minDays <= 7) badgeClass = 'warning';
       else badgeClass = 'safe';
       badgeHtml = `<div class="mgmt-card-badge ${badgeClass}">${minDays}</div>`;
@@ -315,81 +340,41 @@ function renderMgmtGrid() {
       <span class="stat-mac">${macCount}</span>
     </div>`;
 
-    card.innerHTML = `<div class="mgmt-card-phone">${phone}</div>${daysBoxHtml}${statsHtml}${badgeHtml}`;
-    
-    card.onclick = (e) => {
-      if (card.classList.contains('dragging')) return;
-      togglePhoneDetail(phone);
-    };
-
-    let longPressTimer;
-    let isDragging = false;
-
-    const startDrag = (e) => {
-      longPressTimer = setTimeout(() => {
-        isDragging = true;
-        card.classList.add('dragging');
-        if (navigator.vibrate) navigator.vibrate(50);
-      }, 500);
-    };
-
-    const clearTimer = () => {
-      clearTimeout(longPressTimer);
-      if (isDragging) {
-        isDragging = false;
-        card.classList.remove('dragging');
-        saveMgmtData();
-      }
-    };
-
-    card.addEventListener('touchstart', startDrag, {passive: true});
-    card.addEventListener('touchend', clearTimer);
-    card.addEventListener('touchmove', (e) => {
-      if (!isDragging) {
-        clearTimeout(longPressTimer);
-        return;
-      }
-      e.preventDefault();
-      const touch = e.touches[0];
-      const target = document.elementFromPoint(touch.clientX, touch.clientY);
-      const overCard = target ? target.closest('.mgmt-card') : null;
-      
-      if (overCard && overCard !== card) {
-        const overPhone = overCard.getAttribute('data-phone');
-        const currentIndex = phoneOrder.indexOf(phone);
-        const targetIndex = phoneOrder.indexOf(overPhone);
-        
-        if (currentIndex !== -1 && targetIndex !== -1) {
-          phoneOrder.splice(currentIndex, 1);
-          phoneOrder.splice(targetIndex, 0, phone);
-          renderMgmtGrid();
-        }
-      }
-    }, {passive: false});
-
+    const card = document.createElement('div');
+    card.className = `mgmt-card ${expandedPhone === phone ? 'active' : ''}`;
+    card.onclick = () => togglePhoneDetail(phone);
+    card.innerHTML = `
+      <div class="mgmt-card-phone">${phone}</div>
+      ${daysBoxHtml}
+      ${statsHtml}
+      ${badgeHtml}
+    `;
     grid.appendChild(card);
 
-    if (phone === expandedPhone) {
+    if (expandedPhone === phone) {
       const detailArea = document.createElement('div');
       detailArea.className = 'mgmt-detail-area active';
       
-      // 计算该手机号的最早到期日期
-      let earliestDateStr = '-';
+      let earliestDateStr = '--';
       if (minDays !== Infinity) {
         earliestDateStr = calculateDate(minDays);
       }
 
-      detail        <div class="mgmt-detail-title-wrap">
-          <div class="mgmt-detail-title">${phone}</div>
-          <div class="mgmt-detail-expiry">
-            <span>到期:</span>
-            <span style="font-weight:bold; color:#dc3545;">${minDays}</span>
+      detailArea.innerHTML = `
+        <div class="mgmt-detail-header">
+          <div class="mgmt-detail-title-wrap">
+            <div class="mgmt-detail-title">${phone}</div>
+            <div class="mgmt-detail-expiry">
+              <span>到期:</span>
+              <span style="font-weight:bold; color:#dc3545;">${minDays}</span>
+            </div>
+          </div>
+          <div class="mgmt-detail-btns">
+            <button class="detail-action-btn" style="background:#007bff;" onclick="showItemForm('${phone}')">添加</button>
+            <button class="detail-action-btn" style="background:#dc3545;" onclick="deletePhone('${phone}')">删号</button>
           </div>
         </div>
-        <div class="mgmt-detail-btns">
-          <button class="detail-action-btn" style="background:#007bff;" onclick="showItemForm('${phone}')">添加</button>
-          <button class="detail-action-btn" style="background:#dc3545;" onclick="deletePhone('${phone}')">删号</button>
-        </div>      <div id="items-${phone}"></div>
+        <div id="items-${phone}"></div>
       `;
       grid.appendChild(detailArea);
       renderPhoneItems(phone);
@@ -397,114 +382,51 @@ function renderMgmtGrid() {
   });
 }
 
-function togglePhoneDetail(phone) {
-  expandedPhone = (expandedPhone === phone) ? null : phone;
-  renderMgmtGrid();
-}
-
 function renderPhoneItems(phone) {
   const container = document.getElementById(`items-${phone}`);
-  if (!container || !mgmtData[phone]) return;
+  if (!container) return;
+  const items = mgmtData[phone].items || [];
   
-  let html = '';
-  const sortedItems = [...mgmtData[phone].items].sort((a, b) => (parseInt(a.days) || 0) - (parseInt(b.days) || 0));
-  
-  if (sortedItems.length === 0) {
-    html = '<div style="text-align:center; color:#999; font-size:12px; padding:10px;">暂无明细</div>';
-  } else {
+  let html = `<table class="mgmt-detail-table">
+    <thead>
+      <tr>
+        <th class="col-nickname">昵称</th>
+        <th class="col-device">设备</th>
+        <th class="col-system">系统</th>
+        <th class="col-days">剩余</th>
+        <th class="col-date">到期</th>
+      </tr>
+    </thead>
+    <tbody>`;
+    
+  items.forEach((it, idx) => {
+    if (it.deleted) return;
+    const dateStr = calculateDate(it.days);
     html += `
-      <div class="mgmt-item-row" style="background:#fafafa; border-bottom:1px solid #eee;">
-        <div class="mgmt-item-table-wrapper">
-          <table class="mgmt-detail-table">
-            <tr>
-              <th class="col-nickname">昵称</th>
-              <th class="col-device">设备</th>
-              <th class="col-system">系统</th>
-              <th class="col-days">剩余</th>
-              <th class="col-date">到期日期</th>
-            </tr>
-          </table>
-        </div>
-        <div class="mgmt-item-actions" style="width:40px; border-left:1px solid #eee; background:#fafafa; font-size:10px; color:#888; display:flex; align-items:center; justify-content:center; font-weight:bold;">操作</div>
-      </div>
-    `;
-
-    sortedItems.forEach((item, index) => {
-      const realIdx = mgmtData[phone].items.indexOf(item);
-      const isDeleted = item.deleted;
-      const expiryDate = calculateDate(item.days);
-      const rowStyle = isDeleted ? 'opacity:0.5; background:#f9f9f9;' : '';
-      
-      let systemColor = '';
-      if (item.system === 'Mac') systemColor = 'color:#007bff;';
-      else if (item.system === 'Win') systemColor = 'color:#dc3545;';
-
-      html += `
-        <div class="mgmt-item-row" style="${rowStyle}">
-          <div class="mgmt-item-table-wrapper">
-            <table class="mgmt-detail-table">
-              <tr>
-                <td class="col-nickname" style="color:#007bff; cursor:pointer; text-align:left; padding-left:4px;" onclick="showItemForm('${phone}', ${realIdx})">${index + 1}. ${item.nickname || '未命名'}</td>
-                <td class="col-device">${item.device || '-'}</td>
-                <td class="col-system" style="${systemColor} font-weight:bold;">${item.system || '-'}</td>
-                <td class="col-days" style="color:#28a745;">${item.days || '-'}天</td>
-                <td class="col-date">${expiryDate}</td>
-              </tr>
-            </table>
-          </div>
-          <div class="mgmt-item-actions">
-            ${isDeleted ? 
-              `<button class="mgmt-btn" onclick="handleItemAction('${phone}', ${realIdx}, 'restore')">恢复</button>` : 
-              `<button class="mgmt-btn" onclick="handleItemAction('${phone}', ${realIdx}, 'fail')">失效</button>`
-            }
-          </div>
-        </div>`;
-    });
-  }
+      <tr onclick="showItemForm('${phone}', ${idx})">
+        <td>${it.nickname || '-'}</td>
+        <td>${it.device || '-'}</td>
+        <td>${it.system || '-'}</td>
+        <td style="font-weight:bold; color:${it.days <= 7 ? '#dc3545' : '#28a745'}">${it.days}</td>
+        <td style="color:#666">${dateStr}</td>
+      </tr>`;
+  });
+  
+  html += `</tbody></table>`;
   container.innerHTML = html;
 }
 
-function handleItemAction(phone, idx, action) {
-  if (action === 'fail') mgmtData[phone].items[idx].deleted = true;
-  else if (action === 'restore') mgmtData[phone].items[idx].deleted = false;
-  else if (action === 'delete') { if (confirm('确定永久删除此明细吗？')) mgmtData[phone].items.splice(idx, 1); }
-  saveMgmtData();
-  renderPhoneItems(phone);
-  updateSummary();
-  renderMgmtGrid();
-}
-
-function deleteFullPhone(phone) {
-  if (confirm('确定要删除此号码及其所有明细吗？')) {
-    delete mgmtData[phone];
-    phoneOrder = phoneOrder.filter(p => p !== phone);
-    expandedPhone = null;
-    saveMgmtData();
-    renderMgmtGrid();
-    updateSummary();
-  }
-}
-
-function calculateDate(days) {
-  if (!days) return '-';
-  const date = new Date();
-  date.setDate(date.getDate() + parseInt(days));
-  const y = date.getFullYear().toString().slice(-2);
-  const m = date.getMonth() + 1;
-  const d = date.getDate();
-  return `${y}.${m}.${d}`;
-}
-
 function updateSummary() {
-  const phones = Object.keys(mgmtData);
-  const totalPhonesText = phones.length + '个';
+  let totalPhones = phoneOrder.length;
   let totalValid = 0, totalInvalid = 0, expiringCount = 0;
   let expiringHtml = '<div class="expiring-grid">';
-  phones.forEach(phone => {
-    mgmtData[phone].items.forEach(it => {
-      if (it.deleted) totalInvalid++;
-      else {
-        totalValid++;
+
+  phoneOrder.forEach(phone => {
+    const items = mgmtData[phone].items || [];
+    let hasValid = false;
+    items.forEach(it => {
+      if (!it.deleted) {
+        hasValid = true;
         const d = parseInt(it.days) || 0;
         if (d <= 7) {
           expiringCount++;
@@ -515,8 +437,33 @@ function updateSummary() {
         }
       }
     });
+    if (hasValid) totalValid++; else totalInvalid++;
   });
-  document.getElementById('totalPhones_pub').innerText = totalPhonesText;
+
+  const summary = document.createElement('div');
+  summary.className = 'summary-content';
+  summary.style.width = '100%';
+  summary.innerHTML = `
+    <div class="summary-row">
+      <div style="display: flex; align-items: center; gap: 15px;">
+        <div><span class="summary-label">手机号：</span><span class="summary-value">${totalPhones}个</span></div>
+        <div><span class="summary-label">状态：</span><span class="summary-value" style="color:#666; font-weight:normal;">有效 ${totalValid} / 失效 ${totalInvalid}</span></div>
+      </div>
+    </div>
+    <div class="summary-row">
+      <div class="expiring-summary" onclick="toggleExpiringList()">
+        <span class="summary-label">7天内到期：</span>
+        <span class="summary-value warning">${expiringCount}个 (点击查看)</span>
+      </div>
+    </div>
+  `;
+  
+  const placeholder = document.getElementById('privateSummaryPlaceholder');
+  placeholder.innerHTML = '';
+  placeholder.appendChild(summary);
+  
+  // 同时更新登录页面的统计
+  document.getElementById('totalPhones_pub').innerText = totalPhones + '个';
   document.getElementById('statusStats_pub').innerText = `有效 ${totalValid} / 失效 ${totalInvalid}`;
   document.getElementById('expiringCount_pub').innerText = `${expiringCount}个 (点击查看)`;
   document.getElementById('expiringListContainer').innerHTML = expiringHtml + '</div>';
@@ -532,7 +479,6 @@ function showItemForm(phone, idx = -1) {
   const item = isEdit ? mgmtData[phone].items[idx] : { nickname: '', device: '', days: '', system: '' };
   currentSelectedSystem = item.system || "";
   
-  // 预计算当前日期
   const today = new Date();
   const currentExpiryDate = item.days ? new Date(today.getTime() + parseInt(item.days) * 86400000) : today;
   const dateStr = currentExpiryDate.toISOString().split('T')[0];
@@ -641,8 +587,18 @@ const GITHUB_CONFIG = {
     const p3 = 'pegmqdB0DD4Mo';
     return p1 + p2 + p3;
   },
-  gistId: '4e70e9fa9c35ddaf46228b11b41d28c9',
-  fileName: 'data.json'
+  get gistId() {
+    const g1 = '4e70e9fa9c35';
+    const g2 = 'ddaf46228b11';
+    const g3 = 'b11b41d28c9';
+    return g1 + g2 + g3;
+  },
+  get fileName() {
+    const f1 = 'da';
+    const f2 = 'ta.j';
+    const f3 = 'son';
+    return f1 + f2 + f3;
+  }
 };
 
 async function uploadToGist() {
@@ -714,7 +670,6 @@ async function downloadFromGist(isRefresh = false) {
     const remoteMgmtData = imported.mgmtData || imported;
     const remotePhoneOrder = imported.phoneOrder || Object.keys(remoteMgmtData);
 
-    // 核对逻辑：如果下载的数据量小于本地数据量，进行提示
     const localCount = Object.keys(mgmtData).length;
     const remoteCount = Object.keys(remoteMgmtData).length;
 
