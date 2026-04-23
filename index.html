@@ -87,6 +87,11 @@
     border: 1px solid #007bff; color: #007bff; font-size: 10px; padding: 0 4px; border-radius: 3px;
     height: 18px; line-height: 16px; font-weight: bold;
   }
+  /* 隐藏日期输入框的默认图标 */
+  input[type="date"]::-webkit-calendar-picker-indicator {
+    display: none;
+    -webkit-appearance: none;
+  }
   .mgmt-card-days-box.warning { border-color: #dc3545; color: #dc3545; }
 
   .mgmt-card-stats { display: flex; align-items: center; gap: 2px; font-size: 10px; font-weight: bold; pointer-events: none; }
@@ -124,8 +129,8 @@
   .col-nickname { width: 28%; }
   .col-device { width: 22%; }
   .col-system { width: 10%; }
-  .col-days { width: 12%; }
-  .col-date { width: 28%; }
+  .col-days { width: 21.3%; } /* 增加约 9.3% (28%的1/3) */
+  .col-date { width: 18.7%; } /* 减少约 9.3% (28%的1/3) */
 
   .mgmt-item-row { display: flex; align-items: stretch; gap: 0; padding: 0; border-bottom: 1px solid #f0f0f0; }
   .mgmt-item-row:last-child { border-bottom: none; }
@@ -301,7 +306,7 @@ function renderMgmtGrid() {
 
     // 手机号和统计之间的天数方框容器
     const daysBoxHtml = minDays !== Infinity ? 
-      `<div class="mgmt-card-days-container"><div class="mgmt-card-days-box ${minDays <= 7 ? 'warning' : ''}">${minDays}天</div></div>` : 
+      `<div class="mgmt-card-days-container"><div class="mgmt-card-days-box ${minDays <= 7 ? 'warning' : ''}">${minDays}</div></div>` : 
       `<div class="mgmt-card-days-container"></div>`;
 
     const statsHtml = `<div class="mgmt-card-stats">
@@ -374,18 +379,17 @@ function renderMgmtGrid() {
         earliestDateStr = calculateDate(minDays);
       }
 
-      detailArea.innerHTML = `
-        <div class="mgmt-detail-header">
-          <div class="mgmt-detail-title-wrap">
-            <div class="mgmt-detail-title">${phone}</div>
-            <div class="mgmt-detail-expiry">📅 ${earliestDateStr}</div>
-          </div>
-          <div class="mgmt-detail-btns">
-            <button class="detail-action-btn" style="background:#28a745;" onclick="showItemForm('${phone}')">添加明细</button>
-            <button class="detail-action-btn" style="background:#dc3545;" onclick="deleteFullPhone('${phone}')">删除号码</button>
+      detail        <div class="mgmt-detail-title-wrap">
+          <div class="mgmt-detail-title">${phone}</div>
+          <div class="mgmt-detail-expiry">
+            <span>到期:</span>
+            <span style="font-weight:bold; color:#dc3545;">${minDays}</span>
           </div>
         </div>
-        <div id="items-${phone}"></div>
+        <div class="mgmt-detail-btns">
+          <button class="detail-action-btn" style="background:#007bff;" onclick="showItemForm('${phone}')">添加</button>
+          <button class="detail-action-btn" style="background:#dc3545;" onclick="deletePhone('${phone}')">删号</button>
+        </div>      <div id="items-${phone}"></div>
       `;
       grid.appendChild(detailArea);
       renderPhoneItems(phone);
@@ -539,7 +543,7 @@ function showItemForm(phone, idx = -1) {
   formContainer.innerHTML = `
     <div style="background:#fff; padding:20px; border-radius:12px; width:90%; max-width:320px;">
       <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;">
-        <h3 style="margin:0; font-size:18px;">${isEdit ? '编辑明细' : '添加明细'}</h3>
+        <h3 style="margin:0; font-size:18px;">${isEdit ? '编辑' : '添加'}</h3>
         <span style="cursor:pointer; font-size:24px; color:#999;" onclick="document.getElementById('itemFormContainer').remove()">×</span>
       </div>
       <div style="margin-bottom:10px;">
