@@ -42,33 +42,32 @@
 </div>
 
 <script>
-// 配置
+// 配置信息（你原来的）
 const TOKEN = "github_pat_11CCEQIOY0BPvD8XeE9lkc_0qHk0Lg7Vn1VnH0zJzJzJzJzJzJzJzJz";
 const GISTID = "4e70e9fa9c35ddaf46228b11b41d28c9";
 
-// 登录
+// 登录密码：你原来的 qq
 function login(){
   let p = document.getElementById("pwd").value;
-  if(p === "123456"){
+  if(p === "qq"){
     document.getElementById("login").style.display="none";
     document.getElementById("main").style.display="block";
     loadData();
+  }else{
+    alert("密码错误");
   }
 }
 
-// 读取本地
 function loadData(){
   let d = JSON.parse(localStorage.getItem("data")||"[]");
   render(d);
 }
 
-// 保存本地
 function save(d){
   localStorage.setItem("data",JSON.stringify(d));
   render(d);
 }
 
-// 渲染
 function render(d){
   let list = document.getElementById("list");
   let info = document.getElementById("info");
@@ -76,7 +75,6 @@ function render(d){
   list.innerHTML = d.map(i=>`<div>${i}</div>`).join("");
 }
 
-// 添加
 function add(){
   let v = document.getElementById("phone").value.trim();
   if(!v)return;
@@ -97,7 +95,7 @@ async function upload(){
   alert("上传成功");
 }
 
-// 下载（修复：带权限）
+// 下载（已修复：带权限）
 async function download(){
   try{
     let res = await fetch(`https://api.github.com/gists/${GISTID}`,{
@@ -109,7 +107,7 @@ async function download(){
     loadData();
     alert("下载成功");
   }catch(e){
-    alert("下载失败");
+    alert("下载失败，请点刷新重试");
   }
 }
 </script>
