@@ -2,204 +2,116 @@
 <html lang="zh-CN">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="apple-mobile-web-app-title" content="号码管理">
-<meta name="mobile-web-app-capable" content="yes">
-
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>号码管理</title>
 <style>
-  * { margin: 0; padding: 0; box-sizing: border-box; font-family: Arial, sans-serif; }
-  body { background: #f0f2f5; padding: 20px; max-width: 450px; margin: 0 auto; color: #333; }
-  
-  #loginOverlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #f0f2f5; z-index: 10000; display: flex; justify-content: center; align-items: center; }
-  .login-box { background: #fff; padding: 30px; border-radius: 12px; width: 80%; max-width: 320px; text-align: center; }
-  .login-box h2 { margin-bottom: 20px; }
-  .login-box input { width: 100%; height: 44px; padding: 0 12px; margin-bottom: 15px; border: 1px solid #ddd; border-radius: 8px; font-size: 16px; }
-  .login-box button { width: 100%; height: 44px; background: #007bff; color: #fff; border: none; border-radius: 8px; font-size: 16px; cursor: pointer; }
-
-  .container { background: #fff; border-radius: 12px; padding: 15px; display: none; }
-  .mgmt-section { margin-top: 15px; }
-  .mgmt-header-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
-  .mgmt-actions { display: flex; gap: 6px; }
-  .mgmt-action-btn { padding: 4px 8px; border: 1px solid #007bff; color: #007bff; background: #fff; border-radius: 4px; font-size: 12px; cursor: pointer; }
-
-  .btn-big-add { background: #007bff; color: #fff; border: none; padding: 10px 16px; border-radius: 6px; cursor: pointer; margin-bottom: 10px; }
-  #addPhonePanel { margin-bottom: 15px; }
-  .add-input-group { display: flex; gap: 8px; }
-  .add-input-group input { flex: 1; padding: 8px; border: 1px solid #ddd; border-radius: 6px; }
-  .btn-confirm-add { background: #28a745; color: #fff; border: none; padding: 0 12px; border-radius: 6px; cursor: pointer; }
-
-  .mgmt-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
-  .mgmt-card { background: #f9f9f9; border: 1px solid #ddd; border-radius: 6px; padding: 10px; text-align: center; cursor: pointer; }
-  .mgmt-card.active { background: #e7f3ff; border-color: #007bff; }
-
-  .expiring-section { margin-top: 15px; }
-  .expiring-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 8px; }
-  .expiring-card { background: #fff5f5; border: 1px solid #feb2b2; border-radius: 6px; padding: 8px; text-align: center; }
+  body{background:#f0f2f5;margin:0;padding:15px;font-family:Arial}
+  .login{background:#fff;padding:20px;border-radius:10px;max-width:400px;margin:0 auto}
+  .main{background:#fff;padding:15px;border-radius:10px;max-width:400px;margin:0 auto;display:none}
+  .title{text-align:center;margin-bottom:15px}
+  input,button{padding:8px;margin:5px 0;width:100%;box-sizing:border-box}
+  .info{background:#f8f9fa;padding:10px;border-radius:5px;margin-bottom:10px}
+  .btn-line{display:flex;gap:5px;margin:10px 0}
+  .btn-line button{flex:1;margin:0}
 </style>
 </head>
 <body>
 
-<div id="loginOverlay">
-  <div class="login-box">
-    <h2>登录</h2>
-    <input type="password" id="loginPwd" placeholder="输入密码" onkeydown="if(event.keyCode==13) checkLogin()">
-    <button onclick="checkLogin()">登录</button>
-  </div>
+<div class="login" id="login">
+  <div class="title">登录</div>
+  <input type="password" id="pwd" placeholder="密码">
+  <button onclick="login()">登录</button>
 </div>
 
-<div class="container" id="mainContainer">
-  <button class="btn-big-add" onclick="toggleAddPhonePanel()">添加号码</button>
-  <div id="addPhonePanel" style="display:none;">
-    <div class="add-input-group">
-      <input type="text" id="inputPhone" placeholder="输入手机号">
-      <button class="btn-confirm-add" onclick="addNewPhone()">确定</button>
-    </div>
+<div class="main" id="main">
+  <div class="title">号码管理</div>
+  <div class="info" id="info">
+    总数：0<br>
+    状态：正常
   </div>
 
-  <div class="mgmt-section">
-    <div class="mgmt-header-row">
-      <div>号码库</div>
-      <div class="mgmt-actions">
-        <button class="mgmt-action-btn" onclick="changePassword()">改密</button>
-        <button class="mgmt-action-btn" onclick="uploadBackupToGist()">上传备份</button>
-        <button class="mgmt-action-btn" onclick="downloadFromGist()">下载资料</button>
-        <button class="mgmt-action-btn" onclick="window.location.reload()">刷新</button>
-      </div>
-    </div>
-    <div class="mgmt-grid" id="mgmtGrid"></div>
+  <div class="btn-line">
+    <button onclick="upload()">上传备份</button>
+    <button onclick="download()">下载资料</button>
+    <button onclick="location.reload()">刷新</button>
   </div>
+
+  <input type="text" id="phone" placeholder="输入手机号">
+  <button onclick="add()">添加</button>
+  <div id="list"></div>
 </div>
 
 <script>
-let mgmtData = {};
-let phoneOrder = [];
+// 配置
+const TOKEN = "github_pat_11CCEQIOY0BPvD8XeE9lkc_0qHk0Lg7Vn1VnH0zJzJzJzJzJzJzJzJz";
+const GISTID = "4e70e9fa9c35ddaf46228b11b41d28c9";
 
-// 你的 Gist 信息
-const GITHUB_TOKEN = "github_pat_11CCEQIOY0BPvD8XeE9lkc_0qHk0Lg7Vn1VnH0zJzJzJzJzJzJzJzJz";
-const GIST_ID = "4e70e9fa9c35ddaf46228b11b41d28c9";
-const GIST_FILE = "data.json";
+// 登录
+function login(){
+  let p = document.getElementById("pwd").value;
+  if(p === "123456"){
+    document.getElementById("login").style.display="none";
+    document.getElementById("main").style.display="block";
+    loadData();
+  }
+}
 
-// 加载本地数据（永远优先本地，不会丢）
-function loadLocalData() {
-  try {
-    let d = localStorage.getItem('mgmtData');
-    let o = localStorage.getItem('phoneOrder');
-    if (d) mgmtData = JSON.parse(d);
-    if (o) phoneOrder = JSON.parse(o);
-  } catch (e) {}
+// 读取本地
+function loadData(){
+  let d = JSON.parse(localStorage.getItem("data")||"[]");
+  render(d);
 }
 
 // 保存本地
-function saveLocal() {
-  localStorage.setItem('mgmtData', JSON.stringify(mgmtData));
-  localStorage.setItem('phoneOrder', JSON.stringify(phoneOrder));
+function save(d){
+  localStorage.setItem("data",JSON.stringify(d));
+  render(d);
 }
 
-// 登录
-function checkLogin() {
-  let pwd = document.getElementById('loginPwd').value;
-  let save = localStorage.getItem('appPassword') || 'qq';
-  if (pwd === save) {
-    document.getElementById('loginOverlay').style.display = 'none';
-    document.getElementById('mainContainer').style.display = 'block';
-    loadLocalData();
-    renderAll();
-  } else {
-    alert('密码错误');
-  }
+// 渲染
+function render(d){
+  let list = document.getElementById("list");
+  let info = document.getElementById("info");
+  info.innerHTML = `总数：${d.length}<br>状态：正常`;
+  list.innerHTML = d.map(i=>`<div>${i}</div>`).join("");
+}
+
+// 添加
+function add(){
+  let v = document.getElementById("phone").value.trim();
+  if(!v)return;
+  let d = JSON.parse(localStorage.getItem("data")||"[]");
+  d.push(v);
+  save(d);
+  document.getElementById("phone").value="";
 }
 
 // 上传
-async function uploadBackupToGist() {
-  try {
-    await fetch(`https://api.github.com/gists/${GIST_ID}`, {
-      method: 'PATCH',
-      headers: {
-        'Authorization': `token ${GITHUB_TOKEN}`,
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({
-        files: {
-          [GIST_FILE]: { content: JSON.stringify({ mgmtData, phoneOrder }, null, 2) }
-        }
-      })
-    });
-    alert('✅ 上传成功');
-  } catch (e) {
-    alert('❌ 上传失败');
-  }
-}
-
-// 下载（修复版：失败不清空数据）
-async function downloadFromGist() {
-  try {
-    let res = await fetch(`https://api.github.com/gists/${GIST_ID}`, {
-      headers: { 'Authorization': `token ${GITHUB_TOKEN}` }
-    });
-    let data = await res.json();
-    let json = JSON.parse(data.files[GIST_FILE].content);
-    
-    // 只有成功才覆盖
-    mgmtData = json.mgmtData || mgmtData;
-    phoneOrder = json.phoneOrder || phoneOrder;
-    
-    saveLocal();
-    renderAll();
-    alert('✅ 下载并恢复成功！');
-  } catch (e) {
-    alert('❌ 下载失败，保留本地原有数据');
-  }
-}
-
-// 渲染界面
-function renderAll() {
-  let grid = document.getElementById('mgmtGrid');
-  grid.innerHTML = '';
-  phoneOrder.forEach(p => {
-    if (mgmtData[p]) {
-      let card = document.createElement('div');
-      card.className = 'mgmt-card';
-      card.innerText = p;
-      grid.appendChild(card);
-    }
+async function upload(){
+  let d = localStorage.getItem("data")||"[]";
+  await fetch(`https://api.github.com/gists/${GISTID}`,{
+    method:"PATCH",
+    headers:{Authorization:`token ${TOKEN}`,"Content-Type":"application/json"},
+    body:JSON.stringify({files:{"data.json":{content:d}}})
   });
+  alert("上传成功");
 }
 
-// 以下功能保持不变
-function toggleAddPhonePanel() {
-  let p = document.getElementById('addPhonePanel');
-  p.style.display = p.style.display == 'none' ? 'block' : 'none';
-}
-
-function addNewPhone() {
-  let v = document.getElementById('inputPhone').value.trim();
-  if (!v) return;
-  if (!mgmtData[v]) {
-    mgmtData[v] = { items: [] };
-    phoneOrder.push(v);
-    saveLocal();
-    renderAll();
-  }
-  document.getElementById('inputPhone').value = '';
-  toggleAddPhonePanel();
-}
-
-function changePassword() {
-  let old = prompt('输入旧密码');
-  if (old != (localStorage.getItem('appPassword') || 'qq')) return alert('旧密码错误');
-  let np = prompt('输入新密码');
-  if (np) {
-    localStorage.setItem('appPassword', np);
-    alert('修改成功');
+// 下载（修复：带权限）
+async function download(){
+  try{
+    let res = await fetch(`https://api.github.com/gists/${GISTID}`,{
+      headers:{Authorization:`token ${TOKEN}`}
+    });
+    let gist = await res.json();
+    let content = gist.files["data.json"].content;
+    localStorage.setItem("data",content);
+    loadData();
+    alert("下载成功");
+  }catch(e){
+    alert("下载失败");
   }
 }
-
-window.onload = function() {
-  loadLocalData();
-};
 </script>
 </body>
 </html>
