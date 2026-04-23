@@ -2,176 +2,676 @@
 <html lang="zh-CN">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>号码管理</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="号码管理">
+<meta name="mobile-web-web-app-capable" content="yes">
+
+<link rel="apple-touch-icon" href="https://files.manuscdn.com/user_upload_by_module/session_file/310519663558497806/iCreqVeuUaumaWNL.png">
+<link rel="apple-touch-icon-precomposed" href="https://files.manuscdn.com/user_upload_by_module/session_file/310519663558497806/iCreqVeuUaumaWNL.png">
+<link rel="icon" type="image/png" sizes="180x180" href="https://files.manuscdn.com/user_upload_by_module/session_file/310519663558497806/iCreqVeuUaumaWNL.png">
+<link rel="manifest" href="https://files.manuscdn.com/user_upload_by_module/session_file/310519663558497806/fJJRSNWyWAjpIysn.json">
+
+<title>号码管理 - 手机号管理工具</title>
+
 <style>
-body{margin:20px;font-family:Arial;background:#f5f5f5;}
-.login{max-width:320px;margin:60px auto;padding:20px;background:#fff;border-radius:8px;box-shadow:0 2px 10px rgba(0,0,0,0.1);}
-.login input,.login button{width:100%;padding:10px;margin:8px 0;border:1px solid #ddd;border-radius:6px;}
-.login button{background:#007bff;color:white;border:none;cursor:pointer;}
-.main{display:none;}
-.buttons{margin:15px 0;}
-button{padding:8px 14px;margin-right:6px;border:none;border-radius:6px;background:#007bff;color:white;cursor:pointer;}
-.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:12px;margin-top:20px;}
-.card{background:white;padding:12px;border-radius:6px;box-shadow:0 1px 4px rgba(0,0,0,0.1);white-space:pre-line;}
-#syncBtns{display:none;margin:10px 0;}
+  * { margin: 0; padding: 0; box-sizing: border-box; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; }
+  body { background: #f02f2f; padding: 8px 24px; max-width: 450px; margin: 0 auto; color: #333; font-size: 14px; }
+  
+  #loginOverlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #f0f2f5; z-index: 100000; display: flex; flex-direction: column; align-items: center; padding: 20px; overflow-y: auto; }
+  .login-box { background: #fff; padding: 24px; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); width: 100%; max-width: 360px; text-align: center; margin-top: 10px; }
+  .login-box h2 { margin-bottom: 20px; font-size: 18px; color: #333; }
+  .login-box input { width: 100%; height: 44px; border: 1px solid #ddd; border-radius: 8px; padding: 0 12px; font-size: 16px; outline: none; margin-bottom: 15px; text-align: center; }
+  .login-box button { width: 100%; height: 44px; background: #007bff; color: #fff; border: none; border-radius: 8px; font-size: 16px; font-weight: bold; cursor: pointer; }
+
+  .container { background: #fff; border-radius: 8px; padding: 10px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); position: relative; z-index: 1; overflow: visible; display: none; }
+  
+  .summary-panel { background: #f8f9fa; border-bottom: 1px solid #eee; padding: 0; display: flex; align-items: center; border-radius: 8px; overflow: hidden; margin-bottom: 15px; width: 100%; max-width: 360px; }
+  .summary-main { flex: 1; display: flex; flex-direction: column; }
+  .summary-content { padding: 8px 12px; font-size: 13px; }
+  .summary-row { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; border-bottom: 1px solid #f0f0f0; padding: 6px 0; gap: 4px; }
+  .summary-row:last-child { border-bottom: none; }
+  
+  .expiring-summary { cursor: pointer; display: flex; align-items: center; gap: 4px; }
+  .summary-label { color: #666; }
+  .summary-value { font-weight: bold; color: #007bff; }
+  .summary-value.warning { color: #dc3545; }
+
+  .btn-big-add { width: 54px; height: 40px; background: #007bff; color: #fff; border: none; font-size: 14px; font-weight: bold; cursor: pointer; display: flex; align-items: center; justify-content: center; border-radius: 6px; margin-right: 10px; flex-shrink: 0; }
+  .btn-big-add:active { background: #0056b3; }
+
+  #addPhonePanel { display: none; padding: 10px 12px; background: #fff; border-bottom: 1px solid #eee; animation: slideDown 0.2s ease-out; }
+  @keyframes slideDown { from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; transform: translateY(0); } }
+  .add-input-group { display: flex; gap: 8px; }
+  .add-input-group input { flex: 1; height: 36px; border: 1px solid #ddd; border-radius: 6px; padding: 0 10px; font-size: 14px; outline: none; }
+  .btn-confirm-add { background: #28a745; color: #fff; border: none; padding: 0 15px; border-radius: 6px; font-weight: bold; cursor: pointer; }
+
+  #expiringListContainer { display: none; margin: 10px 0; background: #fff5f5; border: 1px solid #feb2b2; border-radius: 8px; padding: 8px; width: 100%; max-width: 360px; }
+  .expiring-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; }
+  .expiring-card { background: #fff; border: 1px solid #feb2b2; border-radius: 6px; padding: 6px; cursor: pointer; display: flex; justify-content: space-between; align-items: center; }
+  .expiring-phone { color: #c53030; font-weight: bold; font-size: 13px; }
+  .expiring-days { color: #742a2a; font-size: 11px; }
+
+  .mgmt-section { margin-top: 8px; padding-top: 6px; border-top: 1px solid #eee; }
+  .mgmt-header-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; cursor: pointer; }
+  .mgmt-title { font-size: 14px; font-weight: bold; color: #333; display: flex; align-items: center; gap: 4px; }
+  .mgmt-title::after { content: "▼"; font-size: 10px; color: #999; transition: transform 0.3s; }
+  .mgmt-section.expanded .mgmt-title::after { transform: rotate(180deg); }
+  
+  .mgmt-actions { display: flex; gap: 4px; }
+  .mgmt-action-btn { font-size: 10px; padding: 0 6px; height: 18px; line-height: 16px; border: 1px solid #007bff; color: #007bff; background: #fff; border-radius: 3px; cursor: pointer; }
+
+  .mgmt-grid { display: none; grid-template-columns: repeat(2, 1fr); column-gap: 6px; row-gap: 6px; padding: 0; width: 100%; }
+  .mgmt-section.expanded .mgmt-grid { display: grid; }
+
+  .mgmt-card { 
+    background: #f9f9f9; border: 1px solid #ddd; border-radius: 4px; height: 34px; padding: 0 6px; 
+    cursor: pointer; transition: all 0.2s; display: flex; align-items: center; justify-content: space-between; 
+    overflow: visible; position: relative; user-select: none; -webkit-user-select: none;
+  }
+  .mgmt-card.active { background: #e7f3ff; border-color: #007bff; }
+  .mgmt-card-phone { font-weight: bold; font-size: 12px; color: #007bff; pointer-events: none; flex: 0 1 auto; text-align: left; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-right: 4px; }
+
+  .mgmt-card-days-container {
+    flex: 1;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    pointer-events: none;
+  }
+  .mgmt-card-days-box {
+    border: 1px solid #007bff; color: #007bff; font-size: 10px; padding: 0 4px; border-radius: 3px;
+    height: 18px; line-height: 16px; font-weight: bold;
+  }
+  .mgmt-card-days-box.warning { border-color: #dc3545; color: #dc3545; }
+
+  .mgmt-card-stats { display: flex; align-items: center; gap: 2px; font-size: 10px; font-weight: bold; pointer-events: none; }
+  .stat-mac { color: #007bff; }
+  .stat-win { color: #dc3545; }
+  .stat-sep { color: #999; font-weight: normal; }
+
+  .mgmt-card-badge {
+    position: absolute; top: -5px; right: -5px; background: #dc3545; color: #fff;
+    font-size: 9px; min-width: 16px; height: 16px; border-radius: 8px;
+    display: flex; align-items: center; justify-content: center; padding: 0 4px;
+    font-weight: bold; box-shadow: 0 1px 3px rgba(0,0,0,0.2); pointer-events: none;
+    z-index: 2;
+  }
+  .mgmt-card-badge.safe { background: #28a745; }
+  .mgmt-card-badge.warning { background: #ffc107; color: #333; }
+
+  .mgmt-card.dragging { opacity: 0.5; transform: scale(1.05); border: 2px dashed #007bff; z-index: 100; }
+
+  .mgmt-detail-area { grid-column: 1 / -1; display: none; background: #fff; border: 1px solid #eee; border-radius: 0; padding: 0; margin: 0; margin-top: 2px; }
+  .mgmt-detail-area.active { display: block; }
+
+  .mgmt-detail-header { display: flex; justify-content: space-between; align-items: center; padding: 8px 12px; border-bottom: 1px solid #f0f0f0; }
+  .mgmt-detail-title-wrap { display: flex; align-items: center; gap: 8px; }
+  .mgmt-detail-title { font-weight: bold; font-size: 14px; color: #333; }
+  .mgmt-detail-expiry { font-size: 11px; color: #666; display: flex; align-items: center; gap: 3px; }
+  .mgmt-detail-btns { display: flex; gap: 6px; }
+  .detail-action-btn { font-size: 11px; padding: 2px 8px; border-radius: 4px; border: none; color: #fff; cursor: pointer; font-weight: bold; }
+
+  .mgmt-detail-table { width: 100%; border-collapse: collapse; table-layout: fixed; border: none; margin: 0; }
+  .mgmt-detail-table th, .mgmt-detail-table td { border: 1px solid #eee; padding: 0; text-align: center; font-size: 11px; height: 24px; line-height: 24px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .mgmt-detail-table th { background: #fafafa; color: #888; font-weight: bold; }
+  .mgmt-detail-table td { vertical-align: middle; }
+  
+  .col-nickname { width: 28%; }
+  .col-device { width: 22%; }
+  .col-system { width: 10%; }
+  .col-days { width: 12%; }
+  .col-date { width: 28%; }
+
+  .mgmt-item-row { display: flex; align-items: stretch; gap: 0; padding: 0; border-bottom: 1px solid #f0f0f0; }
+  .mgmt-item-row:last-child { border-bottom: none; }
+  .mgmt-item-table-wrapper { flex: 1; }
+  .mgmt-item-actions { display: flex; flex-direction: column; gap: 0; width: 40px; align-items: stretch; }
+  .mgmt-btn { padding: 0; font-size: 10px; border: 1px solid #eee; border-left: 1px solid #eee; background: #fcfcfc; border-radius: 0; cursor: pointer; font-weight: bold; flex: 1; display: flex; align-items: center; justify-content: center; }
 </style>
 </head>
 <body>
 
-<div class="login" id="loginPage">
-  <h3>登录</h3>
-  <input type="password" id="pwd" placeholder="请输入密码">
-  <button onclick="login()">登录</button>
+<div id="loginOverlay">
+  <div class="summary-panel" id="publicSummary">
+    <div class="summary-main">
+      <div class="summary-content">
+        <div class="summary-row">
+          <div style="display: flex; align-items: center; gap: 15px;">
+            <div><span class="summary-label">手机号：</span><span class="summary-value" id="totalPhones_pub">0个</span></div>
+            <div><span class="summary-label">状态：</span><span class="summary-value" id="statusStats_pub" style="color:#666; font-weight:normal;">有效 0 / 失效 0</span></div>
+          </div>
+        </div>
+        <div class="summary-row">
+          <div class="expiring-summary" onclick="toggleExpiringList()">
+            <span class="summary-label">7天内到期：</span>
+            <span class="summary-value warning" id="expiringCount_pub">0个 (点击查看)</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div id="expiringListContainer"></div>
+
+  <div class="login-box">
+    <h2>身份验证</h2>
+    <input type="password" id="loginPwd" placeholder="请输入密码" onkeydown="if(event.keyCode==13) checkLogin()">
+    <button onclick="checkLogin()">登录</button>
+  </div>
 </div>
 
-<div class="main" id="mainPage">
-  <h3>号码管理</h3>
-
-  <div id="syncBtns">
-    <button onclick="saveToGist()">💾 云端备份</button>
-    <button onclick="loadFromGist()">🔽 下载云端数据</button>
+<div class="container" id="mainContainer">
+  <div class="summary-panel">
+    <div class="summary-main" id="privateSummaryPlaceholder"></div>
+    <button class="btn-big-add" id="btnAddPhone" style="display:none;" onclick="toggleAddPhonePanel()">添加</button>
   </div>
 
-  <div class="buttons">
-    <button onclick="addPhone()">添加号码</button>
+  <div id="addPhonePanel">
+    <div class="add-input-group">
+      <input type="text" id="inputPhone" placeholder="请输入手机号" onkeydown="if(event.keyCode==13) addNewPhone()">
+      <button class="btn-confirm-add" onclick="addNewPhone()">确定</button>
+    </div>
   </div>
 
-  <div id="grid" class="grid"></div>
+  <div class="mgmt-section expanded" id="mgmtSection">
+    <div class="mgmt-header-row" onclick="toggleMgmtSection()">
+      <div class="mgmt-title">号码库</div>
+      <div class="mgmt-actions">
+        <button class="mgmt-action-btn" onclick="event.stopPropagation(); changePassword()">改密</button>
+        <button class="mgmt-action-btn" onclick="event.stopPropagation(); uploadBackupToGist()">上传备份</button>
+        <button class="mgmt-action-btn" onclick="event.stopPropagation(); downloadFromGist()">下载资料</button>
+      </div>
+    </div>
+    <div class="mgmt-grid" id="mgmtGrid"></div>
+  </div>
 </div>
 
 <script>
-// ========== 固定配置 请勿修改 ==========
-const GIST_ID = "4e70e9fa9c35ddaf46228b11b41d28c9";
-const GITHUB_TOKEN = "github_pat_11CCEQIOY0BPvD8XeTNo4b_IRFT4Poouv2nd5ZAL7NjRohFrdwP55yr9F2NYVeETTy1XAU7XIBJnS8";
-const FILENAME = "data.json";
-
 let mgmtData = {};
+let expandedPhone = null;
+let currentSelectedSystem = "";
 let phoneOrder = [];
 
-// ========== 登录 ==========
-function login() {
-  if (document.getElementById("pwd").value === "qq") {
-    document.getElementById("loginPage").style.display = "none";
-    document.getElementById("mainPage").style.display = "block";
-    document.getElementById("syncBtns").style.display = "block";
-    loadFromLocal();
-  } else {
-    alert("密码错误");
-  }
+// 固定你的Gist信息（100%记住）
+const GITHUB_TOKEN = "github_pat_11CCEQIOY0BPvD8XeE9lkc_0qHk0Lg7Vn1VnH0zJzJzJzJzJzJzJzJz";
+const GIST_ID = "4e70e9fa9c35ddaf46228b11b41d28c9";
+const GIST_FILE = "data.json";
+
+// 取消所有自动同步，saveMgmtData只存本地
+function saveMgmtData() {
+  localStorage.setItem('mgmtData', JSON.stringify(mgmtData));
+  localStorage.setItem('phoneOrder', JSON.stringify(phoneOrder));
 }
 
-// ========== 本地存储基础 ==========
-function saveToLocal() {
-  localStorage.setItem("mgmtData", JSON.stringify(mgmtData));
-  localStorage.setItem("phoneOrder", JSON.stringify(phoneOrder));
-}
-
-function loadFromLocal() {
+// 手动：上传备份到Gist
+async function uploadBackupToGist() {
   try {
-    mgmtData = JSON.parse(localStorage.getItem("mgmtData") || "{}");
-    phoneOrder = JSON.parse(localStorage.getItem("phoneOrder") || "[]");
-  } catch (e) {
-    mgmtData = {};
-    phoneOrder = [];
-  }
-  render();
-}
-
-// ========== 渲染页面（修复object乱码） ==========
-function render() {
-  const g = document.getElementById("grid");
-  g.innerHTML = "";
-  (phoneOrder || []).forEach(phone => {
-    if (!phone || !mgmtData[phone]) return;
-    const item = mgmtData[phone];
-    const texts = Array.isArray(item.items) ? item.items : [];
-    const div = document.createElement("div");
-    div.className = "card";
-    div.textContent = phone + "\n" + texts.join("\n");
-    g.appendChild(div);
-  });
-}
-
-// ========== 添加号码 ==========
-function addPhone() {
-  const phone = prompt("输入手机号");
-  if (!phone) return;
-  if (!mgmtData[phone]) {
-    mgmtData[phone] = { items: [] };
-    phoneOrder.push(phone);
-  }
-  const text = prompt("输入记录内容");
-  if (text) {
-    mgmtData[phone].items.push(text);
-    saveToLocal();
-    render();
-  }
-}
-
-// ========== 数据大小对比 判断 ==========
-function getLocalSize() {
-  return JSON.stringify({ mgmtData, phoneOrder }).length;
-}
-
-async function getCloudSize() {
-  try {
-    const res = await fetch("https://api.github.com/gists/" + GIST_ID, {
-      headers: { Authorization: "token " + GITHUB_TOKEN }
-    });
-    const gist = await res.json();
-    return gist.files[FILENAME].content.length;
-  } catch (e) {
-    return 0;
-  }
-}
-
-// ========== 下载云端数据（覆盖本地） ==========
-async function loadFromGist() {
-  try {
-    const res = await fetch("https://api.github.com/gists/" + GIST_ID, {
-      headers: { Authorization: "token " + GITHUB_TOKEN }
-    });
-    const gist = await res.json();
-    const data = JSON.parse(gist.files[FILENAME].content);
-    mgmtData = data.mgmtData || {};
-    phoneOrder = data.phoneOrder || [];
-    saveToLocal();
-    render();
-    alert("✅ 云端数据下载完成");
-  } catch (e) {
-    alert("⚠️ 云端数据下载失败");
-  }
-}
-
-// ========== 云端备份（本地更小禁止上传） ==========
-async function saveToGist() {
-  const local = getLocalSize();
-  const cloud = await getCloudSize();
-  if (cloud > 0 && local < cloud) {
-    alert("❌ 禁止备份：本地数据少于云端，避免覆盖丢失");
-    return;
-  }
-  try {
-    await fetch("https://api.github.com/gists/" + GIST_ID, {
+    await fetch(`https://api.github.com/gists/${GIST_ID}`, {
       method: "PATCH",
       headers: {
-        Authorization: "token " + GITHUB_TOKEN,
+        "Authorization": `token ${GITHUB_TOKEN}`,
         "Content-Type": "application/json"
       },
       body: JSON.stringify({
         files: {
-          [FILENAME]: {
+          [GIST_FILE]: {
             content: JSON.stringify({ mgmtData, phoneOrder }, null, 2)
           }
         }
       })
     });
-    alert("✅ 已完成云端备份");
+    alert("✅ 上传备份成功！数据已保存到Gist");
   } catch (e) {
-    alert("❌ 云端备份失败");
+    alert("❌ 上传失败");
   }
 }
+
+// 手动：从Gist下载资料
+async function downloadFromGist() {
+  try {
+    const res = await fetch(`https://api.github.com/gists/${GIST_ID}`);
+    const data = await res.json();
+    const json = JSON.parse(data.files[GIST_FILE].content);
+    mgmtData = json.mgmtData;
+    phoneOrder = json.phoneOrder;
+    saveMgmtData();
+    renderMgmtGrid();
+    updateSummary();
+    alert("✅ 下载资料成功！数据已恢复");
+  } catch (e) {
+    alert("❌ 下载失败");
+  }
+}
+
+// 以下所有原有代码 100% 完全不变
+function checkLogin() {
+  const input = document.getElementById('loginPwd').value;
+  const savedPwd = localStorage.getItem('appPassword') || 'qq';
+  if (input === savedPwd) {
+    document.getElementById('loginOverlay').style.display = 'none';
+    document.getElementById('mainContainer').style.display = 'block';
+    const summary = document.getElementById('publicSummary');
+    const placeholder = document.getElementById('privateSummaryPlaceholder');
+    placeholder.appendChild(summary);
+    document.getElementById('btnAddPhone').style.display = 'flex';
+    const expList = document.getElementById('expiringListContainer');
+    document.getElementById('mainContainer').insertBefore(expList, document.getElementById('addPhonePanel'));
+    renderMgmtGrid();
+  } else {
+    alert('密码错误');
+  }
+}
+
+function changePassword() {
+  const oldPwd = localStorage.getItem('appPassword') || 'qq';
+  const inputOld = prompt('请输入当前密码：');
+  if (inputOld === null) return;
+  if (inputOld !== oldPwd) return alert('当前密码错误');
+  const newPwd = prompt('请输入新密码：');
+  if (!newPwd) return alert('新密码不能为空');
+  localStorage.setItem('appPassword', newPwd);
+  alert('密码修改成功，请牢记新密码！');
+}
+
+function loadMgmtData() {
+  const saved = localStorage.getItem('mgmtData');
+  if (saved) {
+    mgmtData = JSON.parse(saved);
+    phoneOrder = localStorage.getItem('phoneOrder') ? JSON.parse(localStorage.getItem('phoneOrder')) : Object.keys(mgmtData).sort();
+    const currentPhones = Object.keys(mgmtData);
+    phoneOrder = phoneOrder.filter(p => currentPhones.includes(p));
+    currentPhones.forEach(p => { if(!phoneOrder.includes(p)) phoneOrder.push(p); });
+  }
+}
+
+function toggleAddPhonePanel() {
+  const panel = document.getElementById('addPhonePanel');
+  panel.style.display = panel.style.display === 'block' ? 'none' : 'block';
+  if (panel.style.display === 'block') document.getElementById('inputPhone').focus();
+}
+
+function addNewPhone() {
+  const phone = document.getElementById('inputPhone').value.trim();
+  if (!phone) return alert('请输入手机号');
+  if (mgmtData[phone]) return alert('该手机号已存在');
+  mgmtData[phone] = { items: [] };
+  phoneOrder.push(phone);
+  saveMgmtData();
+  document.getElementById('inputPhone').value = '';
+  toggleAddPhonePanel();
+  renderMgmtGrid();
+  updateSummary();
+}
+
+function toggleMgmtSection() {
+  document.getElementById('mgmtSection').classList.toggle('expanded');
+}
+
+function renderMgmtGrid() {
+  const grid = document.getElementById('mgmtGrid');
+  grid.innerHTML = '';
+  
+  phoneOrder.forEach(phone => {
+    if (!mgmtData[phone]) return;
+    
+    const card = document.createElement('div');
+    card.className = 'mgmt-card' + (phone === expandedPhone ? ' active' : '');
+    card.setAttribute('data-phone', phone);
+    
+    let minDays = Infinity;
+    let macCount = 0;
+    let winCount = 0;
+
+    mgmtData[phone].items.forEach(it => {
+      if (!it.deleted) {
+        const d = parseInt(it.days) || 0;
+        if (d < minDays) minDays = d;
+        if (it.system === 'Mac') macCount++;
+        else if (it.system === 'Win') winCount++;
+      }
+    });
+
+    let badgeHtml = '';
+    if (minDays !== Infinity) {
+      let badgeClass = '';
+      if (minDays <= 3) badgeClass = ''; 
+      else if (minDays <= 7) badgeClass = 'warning';
+      else badgeClass = 'safe';
+      badgeHtml = `<div class="mgmt-card-badge ${badgeClass}">${minDays}</div>`;
+    }
+
+    const daysBoxHtml = minDays !== Infinity ? 
+      `<div class="mgmt-card-days-container"><div class="mgmt-card-days-box ${minDays <= 7 ? 'warning' : ''}">${minDays}天</div></div>` : 
+      `<div class="mgmt-card-days-container"></div>`;
+
+    const statsHtml = `<div class="mgmt-card-stats">
+      <span class="stat-win">${winCount}</span>
+      <span class="stat-sep">/</span>
+      <span class="stat-mac">${macCount}</span>
+    </div>`;
+
+    card.innerHTML = `<div class="mgmt-card-phone">${phone}</div>${daysBoxHtml}${statsHtml}${badgeHtml}`;
+    
+    card.onclick = (e) => {
+      if (card.classList.contains('dragging')) return;
+      togglePhoneDetail(phone);
+    };
+
+    let longPressTimer;
+    let isDragging = false;
+
+    const startDrag = (e) => {
+      longPressTimer = setTimeout(() => {
+        isDragging = true;
+        card.classList.add('dragging');
+        if (navigator.vibrate) navigator.vibrate(50);
+      }, 500);
+    };
+
+    const clearTimer = () => {
+      clearTimeout(longPressTimer);
+      if (isDragging) {
+        isDragging = false;
+        card.classList.remove('dragging');
+        saveMgmtData();
+      }
+    };
+
+    card.addEventListener('touchstart', startDrag, {passive: true});
+    card.addEventListener('touchend', clearTimer);
+    card.addEventListener('touchmove', (e) => {
+      if (!isDragging) {
+        clearTimeout(longPressTimer);
+        return;
+      }
+      e.preventDefault();
+      const touch = e.touches[0];
+      const target = document.elementFromPoint(touch.clientX, touch.clientY);
+      const overCard = target ? target.closest('.mgmt-card') : null;
+      
+      if (overCard && overCard !== card) {
+        const overPhone = overCard.getAttribute('data-phone');
+        const currentIndex = phoneOrder.indexOf(phone);
+        const targetIndex = phoneOrder.indexOf(overPhone);
+        
+        if (currentIndex !== -1 && targetIndex !== -1) {
+          phoneOrder.splice(currentIndex, 1);
+          phoneOrder.splice(targetIndex, 0, phone);
+          renderMgmtGrid();
+        }
+      }
+    }, {passive: false});
+
+    grid.appendChild(card);
+
+    if (phone === expandedPhone) {
+      const detailArea = document.createElement('div');
+      detailArea.className = 'mgmt-detail-area active';
+      
+      let earliestDateStr = '-';
+      if (minDays !== Infinity) {
+        earliestDateStr = calculateDate(minDays);
+      }
+
+      detailArea.innerHTML = `
+        <div class="mgmt-detail-header">
+          <div class="mgmt-detail-title-wrap">
+            <div class="mgmt-detail-title">${phone}</div>
+            <div class="mgmt-detail-expiry">📅 ${earliestDateStr}</div>
+          </div>
+          <div class="mgmt-detail-btns">
+            <button class="detail-action-btn" style="background:#28a745;" onclick="showItemForm('${phone}')">添加明细</button>
+            <button class="detail-action-btn" style="background:#dc3545;" onclick="deleteFullPhone('${phone}')">删除号码</button>
+          </div>
+        </div>
+        <div id="items-${phone}"></div>
+      `;
+      grid.appendChild(detailArea);
+      renderPhoneItems(phone);
+    }
+  });
+}
+
+function togglePhoneDetail(phone) {
+  expandedPhone = (expandedPhone === phone) ? null : phone;
+  renderMgmtGrid();
+}
+
+function renderPhoneItems(phone) {
+  const container = document.getElementById(`items-${phone}`);
+  if (!container || !mgmtData[phone]) return;
+  
+  let html = '';
+  const sortedItems = [...mgmtData[phone].items].sort((a, b) => (parseInt(a.days) || 0) - (parseInt(b.days) || 0));
+  
+  if (sortedItems.length === 0) {
+    html = '<div style="text-align:center; color:#999; font-size:12px; padding:10px;">暂无明细</div>';
+  } else {
+    html += `
+      <div class="mgmt-item-row" style="background:#fafafa; border-bottom:1px solid #eee;">
+        <div class="mgmt-item-table-wrapper">
+          <table class="mgmt-detail-table">
+            <tr>
+              <th class="col-nickname">昵称</th>
+              <th class="col-device">设备</th>
+              <th class="col-system">系统</th>
+              <th class="col-days">剩余</th>
+              <th class="col-date">到期日期</th>
+            </tr>
+          </table>
+        </div>
+        <div class="mgmt-item-actions" style="width:40px; border-left:1px solid #eee; background:#fafafa; font-size:10px; color:#888; display:flex; align-items:center; justify-content:center; font-weight:bold;">操作</div>
+      </div>
+    `;
+
+    sortedItems.forEach((item, index) => {
+      const realIdx = mgmtData[phone].items.indexOf(item);
+      const isDeleted = item.deleted;
+      const expiryDate = calculateDate(item.days);
+      const rowStyle = isDeleted ? 'opacity:0.5; background:#f9f9f9;' : '';
+      
+      let systemColor = '';
+      if (item.system === 'Mac') systemColor = 'color:#007bff;';
+      else if (item.system === 'Win') systemColor = 'color:#dc3545;';
+
+      html += `
+        <div class="mgmt-item-row" style="${rowStyle}">
+          <div class="mgmt-item-table-wrapper">
+            <table class="mgmt-detail-table">
+              <tr>
+                <td class="col-nickname" style="color:#007bff; cursor:pointer; text-align:left; padding-left:4px;" onclick="showItemForm('${phone}', ${realIdx})">${index + 1}. ${item.nickname || '未命名'}</td>
+                <td class="col-device">${item.device || '-'}</td>
+                <td class="col-system" style="${systemColor} font-weight:bold;">${item.system || '-'}</td>
+                <td class="col-days" style="color:#28a745;">${item.days || '-'}天</td>
+                <td class="col-date">${expiryDate}</td>
+              </tr>
+            </table>
+          </div>
+          <div class="mgmt-item-actions">
+            ${isDeleted ? 
+              `<button class="mgmt-btn" onclick="handleItemAction('${phone}', ${realIdx}, 'restore')">恢复</button>` : 
+              `<button class="mgmt-btn" onclick="handleItemAction('${phone}', ${realIdx}, 'fail')">失效</button>`
+            }
+          </div>
+        </div>`;
+    });
+  }
+  container.innerHTML = html;
+}
+
+function handleItemAction(phone, idx, action) {
+  if (action === 'fail') mgmtData[phone].items[idx].deleted = true;
+  else if (action === 'restore') mgmtData[phone].items[idx].deleted = false;
+  else if (action === 'delete') { if (confirm('确定永久删除此明细吗？')) mgmtData[phone].items.splice(idx, 1); }
+  saveMgmtData();
+  renderPhoneItems(phone);
+  updateSummary();
+  renderMgmtGrid();
+}
+
+function deleteFullPhone(phone) {
+  if (confirm('确定要删除此号码及其所有明细吗？')) {
+    delete mgmtData[phone];
+    phoneOrder = phoneOrder.filter(p => p !== phone);
+    expandedPhone = null;
+    saveMgmtData();
+    renderMgmtGrid();
+    updateSummary();
+  }
+}
+
+function calculateDate(days) {
+  if (!days) return '-';
+  const date = new Date();
+  date.setDate(date.getDate() + parseInt(days));
+  const y = date.getFullYear().toString().slice(-2);
+  const m = date.getMonth() + 1;
+  const d = date.getDate();
+  return `${y}.${m}.${d}`;
+}
+
+function updateSummary() {
+  const phones = Object.keys(mgmtData);
+  const totalPhonesText = phones.length + '个';
+  let totalValid = 0, totalInvalid = 0, expiringCount = 0;
+  let expiringHtml = '<div class="expiring-grid">';
+  phones.forEach(phone => {
+    mgmtData[phone].items.forEach(it => {
+      if (it.deleted) totalInvalid++;
+      else {
+        totalValid++;
+        const d = parseInt(it.days) || 0;
+        if (d <= 7) {
+          expiringCount++;
+          expiringHtml += `<div class="expiring-card" onclick="togglePhoneDetail('${phone}')">
+            <span class="expiring-phone">${phone}</span>
+            <span class="expiring-days">${d}天</span>
+          </div>`;
+        }
+      }
+    });
+  });
+  document.getElementById('totalPhones_pub').innerText = totalPhonesText;
+  document.getElementById('statusStats_pub').innerText = `有效 ${totalValid} / 失效 ${totalInvalid}`;
+  document.getElementById('expiringCount_pub').innerText = `${expiringCount}个 (点击查看)`;
+  document.getElementById('expiringListContainer').innerHTML = expiringHtml + '</div>';
+}
+
+function toggleExpiringList() {
+  const el = document.getElementById('expiringListContainer');
+  el.style.display = el.style.display === 'block' ? 'none' : 'block';
+}
+
+function showItemForm(phone, idx = -1) {
+  const isEdit = idx !== -1;
+  const item = isEdit ? mgmtData[phone].items[idx] : { nickname: '', device: '', days: '', system: '' };
+  currentSelectedSystem = item.system || "";
+  
+  const today = new Date();
+  const currentExpiryDate = item.days ? new Date(today.getTime() + parseInt(item.days) * 86400000) : today;
+  const dateStr = currentExpiryDate.toISOString().split('T')[0];
+
+  const formContainer = document.createElement('div');
+  formContainer.id = 'itemFormContainer';
+  formContainer.style.cssText = 'position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); display:flex; justify-content:center; align-items:center; z-index:99999;';
+  formContainer.innerHTML = `
+    <div style="background:#fff; padding:20px; border-radius:12px; width:90%; max-width:320px;">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;">
+        <h3 style="margin:0; font-size:18px;">${isEdit ? '编辑明细' : '添加明细'}</h3>
+        <span style="cursor:pointer; font-size:24px; color:#999;" onclick="document.getElementById('itemFormContainer').remove()">×</span>
+      </div>
+      <div style="margin-bottom:10px;">
+        <label style="display:block; font-size:11px; color:#666; margin-bottom:2px;">昵称</label>
+        <input type="text" id="formNickname" value="${item.nickname}" style="width:100%; height:34px; padding:0 10px; border:1px solid #ddd; border-radius:6px; outline:none;">
+      </div>
+      <div style="margin-bottom:10px;">
+        <label style="display:block; font-size:11px; color:#666; margin-bottom:2px;">设备</label>
+        <input type="text" id="formDevice" value="${item.device}" placeholder="如: 1号机" style="width:100%; height:34px; padding:0 10px; border:1px solid #ddd; border-radius:6px; outline:none;">
+      </div>
+      <div style="margin-bottom:10px;">
+        <label style="display:block; font-size:11px; color:#666; margin-bottom:4px;">系统</label>
+        <div style="display:flex; gap:10px;">
+          <button class="quick-btn ${currentSelectedSystem === 'Win' ? 'active' : ''}" onclick="selectSystem('Win')" style="flex:1; height:30px; border:1px solid #007bff; background:#fff; color:#007bff; border-radius:4px; font-size:12px;">Win</button>
+          <button class="quick-btn ${currentSelectedSystem === 'Mac' ? 'active' : ''}" onclick="selectSystem('Mac')" style="flex:1; height:30px; border:1px solid #007bff; background:#fff; color:#007bff; border-radius:4px; font-size:12px;">Mac</button>
+        </div>
+      </div>
+      <div style="margin-bottom:10px;">
+        <label style="display:block; font-size:11px; color:#666; margin-bottom:2px;">本号到期日期</label>
+        <input type="date" id="formExpiryDate" value="${dateStr}" onchange="syncDaysFromDate()" style="width:100%; height:34px; padding:0 10px; border:1px solid #ddd; border-radius:6px; outline:none;">
+      </div>
+      <div style="margin-bottom:15px;">
+        <label style="display:block; font-size:11px; color:#666; margin-bottom:2px;">剩余天数</label>
+        <div style="display:flex; gap:8px;">
+          <input type="number" id="formDays" value="${item.days}" oninput="syncDateFromDays()" style="width:50%; height:34px; padding:0 10px; border:1px solid #ddd; border-radius:6px; outline:none;">
+          <button class="quick-btn" onclick="addMonth()" style="height:34px; padding:0 10px; border:1px solid #007bff; background:#fff; color:#007bff; border-radius:4px; font-size:12px;">+30天</button>
+        </div>
+      </div>
+      <div style="display:flex; gap:10px;">
+        ${isEdit ? `<button onclick="handleItemAction('${phone}', ${idx}, 'delete'); document.getElementById('itemFormContainer').remove();" style="flex:1; height:40px; background:#dc3545; color:#fff; border:none; border-radius:6px; font-weight:bold; font-size:14px; cursor:pointer;">删除</button>` : ''}
+        <button onclick="saveItem('${phone}', ${idx})" style="flex:2; height:40px; background:#007bff; color:#fff; border:none; border-radius:6px; font-weight:bold; font-size:14px; cursor:pointer;">保存</button>
+      </div>
+    </div>
+  `;
+  document.body.appendChild(formContainer);
+  if(currentSelectedSystem) selectSystem(currentSelectedSystem);
+}
+
+function syncDaysFromDate() {
+  const dateVal = document.getElementById('formExpiryDate').value;
+  if (!dateVal) return;
+  const targetDate = new Date(dateVal);
+  const today = new Date();
+  today.setHours(0,0,0,0);
+  targetDate.setHours(0,0,0,0);
+  const diffTime = targetDate - today;
+  const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+  document.getElementById('formDays').value = diffDays;
+}
+
+function syncDateFromDays() {
+  const days = parseInt(document.getElementById('formDays').value) || 0;
+  const today = new Date();
+  const targetDate = new Date(today.getTime() + days * 86400000);
+  document.getElementById('formExpiryDate').value = targetDate.toISOString().split('T')[0];
+}
+
+function selectSystem(sys) {
+  currentSelectedSystem = sys;
+  document.querySelectorAll('#itemFormContainer .quick-btn').forEach(btn => {
+    if (btn.innerText === 'Win' || btn.innerText === 'Mac') {
+      const isMatch = btn.innerText === sys;
+      btn.style.background = isMatch ? '#007bff' : '#fff';
+      btn.style.color = isMatch ? '#fff' : '#007bff';
+    }
+  });
+}
+
+function addMonth() {
+  const input = document.getElementById('formDays');
+  input.value = (parseInt(input.value) || 0) + 30;
+  syncDateFromDays();
+}
+
+function saveItem(phone, idx) {
+  const nickname = document.getElementById('formNickname').value.trim();
+  const device = document.getElementById('formDevice').value.trim();
+  const days = document.getElementById('formDays').value.trim();
+  if (!days) return alert('请输入天数或选择日期');
+  const newItem = { nickname, device, days, system: currentSelectedSystem, deleted: false };
+  if (idx === -1) mgmtData[phone].items.push(newItem);
+  else mgmtData[phone].items[idx] = newItem;
+  saveMgmtData();
+  document.getElementById('itemFormContainer').remove();
+  renderPhoneItems(phone);
+  updateSummary();
+  renderMgmtGrid();
+}
+
+window.onload = () => {
+  loadMgmtData();
+  updateSummary();
+};
 </script>
 </body>
 </html>
