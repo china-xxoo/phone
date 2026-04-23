@@ -1,68 +1,72 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>号码管理</title>
+<style>
+body{margin:20px;font-family:Arial;background:#f5f5f5;}
+.login{max-width:320px;margin:60px auto;padding:20px;background:#fff;border-radius:8px;box-shadow:0 2px 10px #00000010;}
+.login input,.login button{width:100%;padding:10px;margin:8px 0;border:1px solid #ddd;border-radius:6px;}
+.login button{background:#007bff;color:white;border:none;cursor:pointer;}
+.main{display:none;}
+.buttons{margin:15px 0;}
+button{padding:8px 14px;margin-right:6px;border:none;border-radius:6px;background:#007bff;color:white;cursor:pointer;}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:12px;margin-top:20px;}
+.card{background:white;padding:12px;border-radius:6px;box-shadow:0 1px 4px #00000010;}
+#syncBtns{display:none;margin:10px 0;}
+</style>
+</head>
+<body>
+
+<!-- 登录 -->
+<div class="login" id="loginPage">
+<h3>登录</h3>
+<input type="password" id="pwd" placeholder="请输入密码">
+<button onclick="login()">登录</button>
+</div>
+
+<!-- 主界面 -->
+<div class="main" id="mainPage">
+<h3>号码管理</h3>
+
+<div id="syncBtns">
+<button onclick="saveToGist()">💾 保存到云端</button>
+<button onclick="loadFromGist()">🔄 从云端同步</button>
+</div>
+
+<div class="buttons">
+<button onclick="addPhone()">添加号码</button>
+<button onclick="exportData()">导出数据</button>
+<button onclick="importData()">导入数据</button>
+</div>
+
+<div id="grid" class="grid"></div>
+</div>
+
 <script>
-// ======================================
-// 你的配置（已填好，不用动）
-// ======================================
+// ==================== 配置 ====================
 const GIST_ID = "4e70e9fa9c35ddaf46228b11b41d28c9";
 const GITHUB_TOKEN = "github_pat_11CCEQIOY0BPvD8XeTNo4b_IRFT4Poouv2nd5ZAL7NjRohFrdwP55yr9F2NYVeETTy1XAU7XIBJnS8";
 const FILENAME = "data.json";
 
+// 数据
 let mgmtData = {};
 let phoneOrder = [];
 
-// ======================================
-// 从云端同步
-// ======================================
-async function loadFromGist() {
-  try {
-    const res = await fetch(`https://api.github.com/gists/${GIST_ID}`, {
-      headers: { Authorization: `token ${GITHUB_TOKEN}` }
-    });
-    const gist = await res.json();
-    const content = JSON.parse(gist.files[FILENAME].content);
-
-    mgmtData = content.mgmtData || {};
-    phoneOrder = content.phoneOrder || Object.keys(mgmtData).sort();
-
-    saveToLocal();
-    renderMgmtGrid();
-    updateSummary();
-    alert("✅ 从云端同步成功！");
-  } catch (e) {
+// ==================== 登录 ====================
+function login() {
+  if (document.getElementById("pwd").value === "qq") {
+    document.getElementById("loginPage").style.display = "none";
+    document.getElementById("mainPage").style.display = "block";
+    document.getElementById("syncBtns").style.display = "block";
     loadFromLocal();
-    alert("⚠️ 云端同步失败，使用本地数据");
+  } else {
+    alert("密码错误");
   }
 }
 
-// ======================================
-// 保存到云端
-// ======================================
-async function saveToGist() {
-  try {
-    const data = { mgmtData, phoneOrder };
-    await fetch(`https://api.github.com/gists/${GIST_ID}`, {
-      method: "PATCH",
-      headers: {
-        Authorization: `token ${GITHUB_TOKEN}`,
-        "Content-Type": "application/json"
-      },
-      body: JSON.stringify({
-        files: {
-          [FILENAME]: { content: JSON.stringify(data, null, 2) }
-        }
-      })
-    });
-    saveToLocal();
-    renderMgmtGrid();
-    updateSummary();
-    alert("✅ 已保存到云端！");
-  } catch (e) {
-    alert("❌ 保存到云端失败");
-  }
-}
-
-// ======================================
-// 本地存储
-// ======================================
+// ==================== 本地存储 ====================
 function saveToLocal() {
   localStorage.setItem("mgmtData", JSON.stringify(mgmtData));
   localStorage.setItem("phoneOrder", JSON.stringify(phoneOrder));
@@ -71,21 +75,91 @@ function saveToLocal() {
 function loadFromLocal() {
   mgmtData = JSON.parse(localStorage.getItem("mgmtData") || "{}");
   phoneOrder = JSON.parse(localStorage.getItem("phoneOrder") || "[]");
-  renderMgmtGrid();
-  updateSummary();
+  render();
 }
 
-// ======================================
-// 登录成功后，显示同步按钮
-// ======================================
-function showSyncButtons() {
-  const btnArea = document.getElementById("syncButtons");
-  if (btnArea) btnArea.style.display = "block";
+// ==================== 渲染 ====================
+function render() {
+  const g = document.getElementById("grid");
+  g.innerHTML = "";
+  phoneOrder.forEach(p => {
+    if (!mgmtData[p]) return;
+    const div = document.createElement("div");
+    div.className = "card";
+    div.innerText = p + "\n" + (mgmtData[p].items || []).join("\n");
+    g.appendChild(div);
+  });
+}
+
+// ==================== 添加号码 ====================
+function addPhone() {
+  const phone = prompt("输入手机号");
+  if (!phone) return;
+  if (!mgmtData[phone]) { mgmtData[phone] = { items: [] }; phoneOrder.push(phone); }
+  const text = prompt("添加内容");
+  if (text) mgmtData[phone].items.push(text);
+  saveToLocal(); render();
+}
+
+// ==================== 导出/导入 ====================
+function exportData() {
+  const blob = new Blob([JSON.stringify({mgmtData,phoneOrder})],{type:"application/json"});
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = "backup.json";
+  a.click();
+}
+
+function importData() {
+  const inp = document.createElement("input");
+  inp.type = "file";
+  inp.accept = ".json";
+  inp.onchange = e => {
+    const r = new FileReader();
+    r.onload = e => {
+      const d = JSON.parse(e.target.result);
+      mgmtData = d.mgmtData || {};
+      phoneOrder = d.phoneOrder || Object.keys(mgmtData);
+      saveToLocal(); render(); alert("导入成功");
+    };
+    r.readAsText(e.target.files[0]);
+  };
+  inp.click();
+}
+
+// ==================== 云端同步 ====================
+async function loadFromGist() {
+  try {
+    const res = await fetch("https://api.github.com/gists/"+GIST_ID,{
+      headers:{Authorization:"token "+GITHUB_TOKEN}
+    });
+    const gist = await res.json();
+    const data = JSON.parse(gist.files[FILENAME].content);
+    mgmtData = data.mgmtData || {};
+    phoneOrder = data.phoneOrder || Object.keys(mgmtData);
+    saveToLocal(); render(); alert("✅ 同步成功");
+  } catch(e) {
+    alert("⚠️ 同步失败");
+  }
+}
+
+async function saveToGist() {
+  try {
+    await fetch("https://api.github.com/gists/"+GIST_ID,{
+      method:"PATCH",
+      headers:{
+        Authorization:"token "+GITHUB_TOKEN,
+        "Content-Type":"application/json"
+      },
+      body:JSON.stringify({
+        files:{[FILENAME]:{content:JSON.stringify({mgmtData,phoneOrder},null,2)}}
+      })
+    });
+    alert("✅ 已保存到云端");
+  } catch(e) {
+    alert("❌ 保存失败");
+  }
 }
 </script>
-
-<!-- 同步按钮（默认隐藏，登录后才显示） -->
-<div id="syncButtons" style="display:none; margin:10px 0;">
-  <button onclick="saveToGist()" style="padding:8px 14px; margin-right:6px;">💾 保存到云端</button>
-  <button onclick="loadFromGist()" style="padding:8px 14px;">🔄 从云端同步</button>
-</div>
+</body>
+</html>
