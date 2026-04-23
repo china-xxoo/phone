@@ -29,21 +29,19 @@ button{padding:8px 14px;margin-right:6px;border:none;border-radius:6px;backgroun
   <h3>号码管理</h3>
 
   <div id="syncBtns">
-    <button onclick="saveToGist()">💾 保存到云端</button>
-    <button onclick="loadFromGist()">🔄 从云端同步</button>
+    <button onclick="saveToGist()">💾 云端备份</button>
+    <button onclick="loadFromGist()">🔽 下载云端数据</button>
   </div>
 
   <div class="buttons">
     <button onclick="addPhone()">添加号码</button>
-    <button onclick="exportData()">导出数据</button>
-    <button onclick="importData()">导入数据</button>
   </div>
 
   <div id="grid" class="grid"></div>
 </div>
 
 <script>
-// ==================== 配置 ====================
+// ========== 固定配置 请勿修改 ==========
 const GIST_ID = "4e70e9fa9c35ddaf46228b11b41d28c9";
 const GITHUB_TOKEN = "github_pat_11CCEQIOY0BPvD8XeTNo4b_IRFT4Poouv2nd5ZAL7NjRohFrdwP55yr9F2NYVeETTy1XAU7XIBJnS8";
 const FILENAME = "data.json";
@@ -51,7 +49,7 @@ const FILENAME = "data.json";
 let mgmtData = {};
 let phoneOrder = [];
 
-// ==================== 登录 ====================
+// ========== 登录 ==========
 function login() {
   if (document.getElementById("pwd").value === "qq") {
     document.getElementById("loginPage").style.display = "none";
@@ -63,7 +61,7 @@ function login() {
   }
 }
 
-// ==================== 本地存储 ====================
+// ========== 本地存储基础 ==========
 function saveToLocal() {
   localStorage.setItem("mgmtData", JSON.stringify(mgmtData));
   localStorage.setItem("phoneOrder", JSON.stringify(phoneOrder));
@@ -80,17 +78,14 @@ function loadFromLocal() {
   render();
 }
 
-// ==================== 渲染（彻底修复 [object Object]）====================
+// ========== 渲染页面（修复object乱码） ==========
 function render() {
   const g = document.getElementById("grid");
   g.innerHTML = "";
-
   (phoneOrder || []).forEach(phone => {
     if (!phone || !mgmtData[phone]) return;
-
     const item = mgmtData[phone];
     const texts = Array.isArray(item.items) ? item.items : [];
-
     const div = document.createElement("div");
     div.className = "card";
     div.textContent = phone + "\n" + texts.join("\n");
@@ -98,16 +93,14 @@ function render() {
   });
 }
 
-// ==================== 添加号码 ====================
+// ========== 添加号码 ==========
 function addPhone() {
   const phone = prompt("输入手机号");
   if (!phone) return;
-
   if (!mgmtData[phone]) {
     mgmtData[phone] = { items: [] };
     phoneOrder.push(phone);
   }
-
   const text = prompt("输入记录内容");
   if (text) {
     mgmtData[phone].items.push(text);
@@ -116,40 +109,7 @@ function addPhone() {
   }
 }
 
-// ==================== 导出 / 导入 ====================
-function exportData() {
-  const data = JSON.stringify({ mgmtData, phoneOrder }, null, 2);
-  const blob = new Blob([data], { type: "application/json" });
-  const a = document.createElement("a");
-  a.href = URL.createObjectURL(blob);
-  a.download = "backup.json";
-  a.click();
-}
-
-function importData() {
-  const input = document.createElement("input");
-  input.type = "file";
-  input.accept = ".json";
-  input.onchange = (e) => {
-    const reader = new FileReader();
-    reader.onload = (ev) => {
-      try {
-        const data = JSON.parse(ev.target.result);
-        mgmtData = data.mgmtData || {};
-        phoneOrder = data.phoneOrder || Object.keys(mgmtData);
-        saveToLocal();
-        render();
-        alert("导入成功！");
-      } catch (e) {
-        alert("导入失败：文件格式错误");
-      }
-    };
-    reader.readAsText(e.target.files[0]);
-  };
-  input.click();
-}
-
-// ==================== 大小判断 ====================
+// ========== 数据大小对比 判断 ==========
 function getLocalSize() {
   return JSON.stringify({ mgmtData, phoneOrder }).length;
 }
@@ -166,7 +126,7 @@ async function getCloudSize() {
   }
 }
 
-// ==================== 云端同步 ====================
+// ========== 下载云端数据（覆盖本地） ==========
 async function loadFromGist() {
   try {
     const res = await fetch("https://api.github.com/gists/" + GIST_ID, {
@@ -174,28 +134,24 @@ async function loadFromGist() {
     });
     const gist = await res.json();
     const data = JSON.parse(gist.files[FILENAME].content);
-
     mgmtData = data.mgmtData || {};
     phoneOrder = data.phoneOrder || [];
-
     saveToLocal();
     render();
-    alert("✅ 同步成功");
+    alert("✅ 云端数据下载完成");
   } catch (e) {
-    alert("⚠️ 同步失败");
+    alert("⚠️ 云端数据下载失败");
   }
 }
 
-// ==================== 保存云端（本地 < 云端 → 禁止）====================
+// ========== 云端备份（本地更小禁止上传） ==========
 async function saveToGist() {
   const local = getLocalSize();
   const cloud = await getCloudSize();
-
   if (cloud > 0 && local < cloud) {
-    alert("❌ 禁止上传：本地数据比云端小！");
+    alert("❌ 禁止备份：本地数据少于云端，避免覆盖丢失");
     return;
   }
-
   try {
     await fetch("https://api.github.com/gists/" + GIST_ID, {
       method: "PATCH",
@@ -211,9 +167,9 @@ async function saveToGist() {
         }
       })
     });
-    alert("✅ 已保存到云端");
+    alert("✅ 已完成云端备份");
   } catch (e) {
-    alert("❌ 保存失败");
+    alert("❌ 云端备份失败");
   }
 }
 </script>
