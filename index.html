@@ -1,17 +1,16 @@
 <script>
 // ======================================
-// 你的配置信息（已填好，无需修改）
+// 你的配置（已填好，不用动）
 // ======================================
 const GIST_ID = "4e70e9fa9c35ddaf46228b11b41d28c9";
 const GITHUB_TOKEN = "github_pat_11CCEQIOY0BPvD8XeTNo4b_IRFT4Poouv2nd5ZAL7NjRohFrdwP55yr9F2NYVeETTy1XAU7XIBJnS8";
 const FILENAME = "data.json";
 
-// 你的数据变量（和你原来的保持一致）
 let mgmtData = {};
 let phoneOrder = [];
 
 // ======================================
-// 从云端 Gist 加载数据
+// 从云端同步
 // ======================================
 async function loadFromGist() {
   try {
@@ -24,19 +23,18 @@ async function loadFromGist() {
     mgmtData = content.mgmtData || {};
     phoneOrder = content.phoneOrder || Object.keys(mgmtData).sort();
 
-    saveToLocal(); // 同时保存到本地，防止云端失败
-    if (typeof renderMgmtGrid === 'function') renderMgmtGrid();
-    if (typeof updateSummary === 'function') updateSummary();
+    saveToLocal();
+    renderMgmtGrid();
+    updateSummary();
     alert("✅ 从云端同步成功！");
   } catch (e) {
-    console.error("云端同步失败:", e);
-    loadFromLocal(); // 降级到本地数据
-    alert("⚠️ 云端同步失败，已加载本地数据");
+    loadFromLocal();
+    alert("⚠️ 云端同步失败，使用本地数据");
   }
 }
 
 // ======================================
-// 保存数据到云端 Gist
+// 保存到云端
 // ======================================
 async function saveToGist() {
   try {
@@ -54,15 +52,16 @@ async function saveToGist() {
       })
     });
     saveToLocal();
+    renderMgmtGrid();
+    updateSummary();
     alert("✅ 已保存到云端！");
   } catch (e) {
-    console.error("保存到云端失败:", e);
     alert("❌ 保存到云端失败");
   }
 }
 
 // ======================================
-// 本地存储（备用方案）
+// 本地存储
 // ======================================
 function saveToLocal() {
   localStorage.setItem("mgmtData", JSON.stringify(mgmtData));
@@ -72,18 +71,21 @@ function saveToLocal() {
 function loadFromLocal() {
   mgmtData = JSON.parse(localStorage.getItem("mgmtData") || "{}");
   phoneOrder = JSON.parse(localStorage.getItem("phoneOrder") || "[]");
-  if (typeof renderMgmtGrid === 'function') renderMgmtGrid();
-  if (typeof updateSummary === 'function') updateSummary();
+  renderMgmtGrid();
+  updateSummary();
 }
 
 // ======================================
-// 页面加载时自动从云端同步
+// 登录成功后，显示同步按钮
 // ======================================
-window.addEventListener('load', loadFromGist);
+function showSyncButtons() {
+  const btnArea = document.getElementById("syncButtons");
+  if (btnArea) btnArea.style.display = "block";
+}
 </script>
 
-<!-- 页面上添加两个同步按钮 -->
-<div style="margin: 10px 0;">
-  <button onclick="saveToGist()" style="padding: 8px 16px; margin-right: 8px;">💾 保存到云端</button>
-  <button onclick="loadFromGist()" style="padding: 8px 16px;">🔄 从云端同步</button>
+<!-- 同步按钮（默认隐藏，登录后才显示） -->
+<div id="syncButtons" style="display:none; margin:10px 0;">
+  <button onclick="saveToGist()" style="padding:8px 14px; margin-right:6px;">💾 保存到云端</button>
+  <button onclick="loadFromGist()" style="padding:8px 14px;">🔄 从云端同步</button>
 </div>
