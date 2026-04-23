@@ -8,10 +8,10 @@
 <meta name="apple-mobile-web-app-title" content="号码管理">
 <meta name="mobile-web-app-capable" content="yes">
 
-<link rel="apple-touch-icon" href="https://files.manuscdn.com/user_upload_by_module/session_file/310519663558497806/iCreqVeuUaumaWNL.png">
-<link rel="apple-touch-icon-precomposed" href="https://files.manuscdn.com/user_upload_by_module/session_file/310519663558497806/iCreqVeuUaumaWNL.png">
-<link rel="icon" type="image/png" sizes="180x180" href="https://files.manuscdn.com/user_upload_by_module/session_file/310519663558497806/iCreqVeuUaumaWNL.png">
-<link rel="manifest" href="https://files.manuscdn.com/user_upload_by_module/session_file/310519663558497806/fJJRSNWyWAjpIysn.json">
+<link rel="apple-touch-icon" href="https://filesmanuscdn.com/user_upload_by_module/session_file/310519663558497806/iCreqVeuUaumaWNL.png">
+<link rel="apple-touch-icon-precomposed" href="https://filesmanuscdn.com/user_upload_by_module/session_file/310519663558497806/iCreqVeuUaumaWNL.png">
+<link rel="icon" type="image/png" sizes="180x180" href="https://filesmanuscdn.com/user_upload_by_module/session_file/310519663558497806/iCreqVeuUaumaWNL.png">
+<link rel="manifest" href="https://filesmanuscdn.com/user_upload_by_module/session_file/310519663558497806/fJJRSNWyWAjpIysn.json">
 
 <title>号码管理 - 手机号管理工具</title>
 
@@ -95,7 +95,7 @@
     position: absolute; top: -5px; right: -5px; background: #dc3545; color: #fff;
     font-size: 9px; min-width: 16px; height: 16px; border-radius: 8px;
     display: flex; align-items: center; justify-content: center; padding: 0 4px;
-    font-weight: bold; box-shadow: 0 1px 3px rgba(0,0,0,0.2); pointer-events: none;
+    font-weight: bold; box-shadow: 0 1px 3 rgba(0,0,0,0.2); pointer-events: none;
     z-index: 2;
   }
   .mgmt-card-badge.safe { background: #28a745; }
@@ -181,6 +181,7 @@
         <button class="mgmt-action-btn" onclick="event.stopPropagation(); changePassword()">改密</button>
         <button class="mgmt-action-btn" onclick="event.stopPropagation(); uploadBackupToGist()">上传备份</button>
         <button class="mgmt-action-btn" onclick="event.stopPropagation(); downloadFromGist()">下载资料</button>
+        <button class="mgmt-action-btn" onclick="event.stopPropagation(); window.location.reload();">刷新</button>
       </div>
     </div>
     <div class="mgmt-grid" id="mgmtGrid"></div>
@@ -193,18 +194,15 @@ let expandedPhone = null;
 let currentSelectedSystem = "";
 let phoneOrder = [];
 
-// 固定你的Gist信息（100%记住）
 const GITHUB_TOKEN = "github_pat_11CCEQIOY0BPvD8XeE9lkc_0qHk0Lg7Vn1VnH0zJzJzJzJzJzJzJzJz";
 const GIST_ID = "4e70e9fa9c35ddaf46228b11b41d28c9";
 const GIST_FILE = "data.json";
 
-// 取消所有自动同步，saveMgmtData只存本地
 function saveMgmtData() {
   localStorage.setItem('mgmtData', JSON.stringify(mgmtData));
   localStorage.setItem('phoneOrder', JSON.stringify(phoneOrder));
 }
 
-// 手动：上传备份到Gist
 async function uploadBackupToGist() {
   try {
     await fetch(`https://api.github.com/gists/${GIST_ID}`, {
@@ -221,16 +219,19 @@ async function uploadBackupToGist() {
         }
       })
     });
-    alert("✅ 上传备份成功！数据已保存到Gist");
+    alert("✅ 上传备份成功！");
   } catch (e) {
     alert("❌ 上传失败");
   }
 }
 
-// 手动：从Gist下载资料
 async function downloadFromGist() {
   try {
-    const res = await fetch(`https://api.github.com/gists/${GIST_ID}`);
+    const res = await fetch(`https://api.github.com/gists/${GIST_ID}`, {
+      headers: {
+        "Authorization": `token ${GITHUB_TOKEN}`
+      }
+    });
     const data = await res.json();
     const json = JSON.parse(data.files[GIST_FILE].content);
     mgmtData = json.mgmtData;
@@ -238,13 +239,12 @@ async function downloadFromGist() {
     saveMgmtData();
     renderMgmtGrid();
     updateSummary();
-    alert("✅ 下载资料成功！数据已恢复");
+    alert("✅ 下载资料成功！");
   } catch (e) {
-    alert("❌ 下载失败");
+    alert("❌ 下载失败，请点刷新重试！");
   }
 }
 
-// 以下所有原有代码 100% 完全不变
 function checkLogin() {
   const input = document.getElementById('loginPwd').value;
   const savedPwd = localStorage.getItem('appPassword') || 'qq';
@@ -271,7 +271,7 @@ function changePassword() {
   const newPwd = prompt('请输入新密码：');
   if (!newPwd) return alert('新密码不能为空');
   localStorage.setItem('appPassword', newPwd);
-  alert('密码修改成功，请牢记新密码！');
+  alert('密码修改成功！');
 }
 
 function loadMgmtData() {
