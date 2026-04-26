@@ -134,9 +134,7 @@
   .mgmt-item-actions { display: flex; flex-direction: column; gap: 0; width: 40px; align-items: stretch; }
   .mgmt-btn { padding: 0; font-size: 10px; border: 1px solid #eee; border-left: 1px solid #eee; background: #fcfcfc; border-radius: 0; cursor: pointer; font-weight: bold; flex: 1; display: flex; align-items: center; justify-content: center; }
 
-  /* 隐藏的原生日期选择器，通过JS触发 */
-  #hiddenDatePicker { position: absolute; opacity: 0; pointer-events: none; top: 0; left: 0; width: 0; height: 0; }
-</style>
+  </style>
 </head>
 <body>
 
@@ -164,7 +162,7 @@
 
   <div class="login-box">
     <h2>身份验证</h2>
-    <input type="password" id="loginPwd" placeholder="请输入密码" onkeydown="if(event.keyCode==13) checkLogin()">
+    <input type="password" id="loginPwd" value="" autocomplete="off" placeholder="请输入密码" onkeydown="if(event.keyCode==13) checkLogin()">
     <button onclick="checkLogin()">登录</button>
   </div>
 </div>
@@ -196,8 +194,7 @@
   </div>
 </div>
 
-<!-- 用于修改手机号到期日期的隐藏日期选择器 -->
-<input type="date" id="hiddenDatePicker" onchange="handlePhoneDateChange()">
+<!-- 删除了隐藏日期选择器，改用自定义弹窗 -->
 
 <script>
 let mgmtData = {};
@@ -401,19 +398,32 @@ function renderMgmtGrid() {
 }
 
 function triggerPhoneDatePicker(phone, days) {
-  const picker = document.getElementById('hiddenDatePicker');
   const today = new Date();
   const targetDate = new Date(today.getTime() + days * 86400000);
-  picker.value = targetDate.toISOString().split('T')[0];
-  picker.dataset.phone = phone;
-  picker.showPicker(); // 触发日期选择器
+  const dateStr = targetDate.toISOString().split('T')[0];
+
+  const formContainer = document.createElement('div');
+  formContainer.id = 'phoneDateFormContainer';
+  formContainer.style.cssText = 'position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); display:flex; justify-content:center; align-items:center; z-index:99999;';
+  formContainer.innerHTML = `
+    <div style="background:#fff; padding:20px; border-radius:12px; width:90%; max-width:300px; text-align:center;">
+      <h3 style="margin-bottom:15px; font-size:16px;">修改号码到期时间</h3>
+      <div style="margin-bottom:15px;">
+        <label style="display:block; font-size:12px; color:#666; margin-bottom:5px;">到期日期</label>
+        <input type="date" id="newPhoneDate" value="${dateStr}" style="width:100%; height:40px; padding:0 10px; border:1px solid #ddd; border-radius:8px; font-size:16px; outline:none;">
+      </div>
+      <div style="display:flex; gap:10px;">
+        <button onclick="document.getElementById('phoneDateFormContainer').remove()" style="flex:1; height:40px; background:#f0f0f0; color:#333; border:none; border-radius:8px; font-weight:bold; cursor:pointer;">取消</button>
+        <button onclick="savePhoneDate('${phone}')" style="flex:1; height:40px; background:#007bff; color:#fff; border:none; border-radius:8px; font-weight:bold; cursor:pointer;">确定</button>
+      </div>
+    </div>
+  `;
+  document.body.appendChild(formContainer);
 }
 
-function handlePhoneDateChange() {
-  const picker = document.getElementById('hiddenDatePicker');
-  const phone = picker.dataset.phone;
-  const dateVal = picker.value;
-  if (!phone || !dateVal) return;
+function savePhoneDate(phone) {
+  const dateVal = document.getElementById('newPhoneDate').value;
+  if (!dateVal) return;
 
   const targetDate = new Date(dateVal);
   const today = new Date();
@@ -424,6 +434,7 @@ function handlePhoneDateChange() {
   
   mgmtData[phone].phoneDays = diffDays;
   saveMgmtData();
+  document.getElementById('phoneDateFormContainer').remove();
   renderMgmtGrid();
   updateSummary();
 }
@@ -778,6 +789,7 @@ async function refreshFromGist() {
 }
 
 window.onload = () => {
+  document.getElementById('loginPwd').value = ''; // 强制清空密码框
   loadMgmtData();
   updateSummary();
 };
