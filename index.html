@@ -239,13 +239,43 @@ function loadMgmtData() {
     const currentPhones = Object.keys(mgmtData);
     phoneOrder = phoneOrder.filter(p => currentPhones.includes(p));
     currentPhones.forEach(p => { 
-      if(!phoneOrder.includes(p)) phoneOrder.push(p); 
-      // 数据兼容：如果不存在phoneDays，初始化为0
-      if (mgmtData[p].phoneDays === undefined) {
-        mgmtData[p].phoneDays = 0;
+      if(!phoneOrder.includes(p)) phoneOrder.push(p);
+      
+      // 数据兼容：将旧的phoneDays转换为expiryTimestamp
+      if (mgmtData[p].expiryTimestamp === undefined) {
+        const phoneDays = parseInt(mgmtData[p].phoneDays) || 0;
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        const expiryDate = new Date(today.getTime() + phoneDays * 86400000);
+        mgmtData[p].expiryTimestamp = expiryDate.getTime();
+      }
+      
+      // 转换明细中的days为expiryTimestamp
+      if (mgmtData[p].items) {
+        mgmtData[p].items.forEach(item => {
+          if (item.expiryTimestamp === undefined && item.days !== undefined) {
+            const itemDays = parseInt(item.days) || 0;
+            const today = new Date();
+            today.setHours(0, 0, 0, 0);
+            const expiryDate = new Date(today.getTime() + itemDays * 86400000);
+            item.expiryTimestamp = expiryDate.getTime();
+          }
+        });
       }
     });
   }
+}
+
+// 根据到期时间戳计算剩余天数
+function calculateRemainingDays(expiryTimestamp) {
+  if (!expiryTimestamp) return 0;
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const expiryDate = new Date(expiryTimestamp);
+  expiryDate.setHours(0, 0, 0, 0);
+  const diffTime = expiryDate - today;
+  const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+  return Math.max(0, diffDays);
 }
 
 function saveMgmtData() {
@@ -263,7 +293,9 @@ function addNewPhone() {
   const phone = document.getElementById('inputPhone').value.trim();
   if (!phone) return alert('请输入手机号');
   if (mgmtData[phone]) return alert('该手机号已存在');
-  mgmtData[phone] = { items: [], phoneDays: 0 };
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  mgmtData[phone] = { items: [], expiryTimestamp: today.getTime() };
   phoneOrder.push(phone);
   saveMgmtData();
   document.getElementById('inputPhone').value = '';
@@ -287,8 +319,8 @@ function renderMgmtGrid() {
     card.className = 'mgmt-card' + (phone === expandedPhone ? ' active' : '');
     card.setAttribute('data-phone', phone);
     
-    // 号码本身的倒计时
-    const phoneDays = parseInt(mgmtData[phone].phoneDays) || 0;
+    // 号码本身的倒计时（基于到期时间戳实时计算）
+    const phoneDays = calculateRemainingDays(mgmtData[phone].expiryTimestamp);
     
     // 统计明细及寻找明细中的最小天数
     let macCount = 0;
@@ -298,7 +330,7 @@ function renderMgmtGrid() {
       if (!it.deleted) {
         if (it.system === 'Mac') macCount++;
         else if (it.system === 'Win') winCount++;
-        const d = parseInt(it.days) || 0;
+        const d = calculateRemainingDays(it.expiryTimestamp);
         if (d < minItemDays) minItemDays = d;
       }
     });
@@ -379,14 +411,14 @@ function renderMgmtGrid() {
       const detailArea = document.createElement('div');
       detailArea.className = 'mgmt-detail-area active';
       
-      // 使用号码本身的倒计时计算日期
-      const phoneExpiryDateStr = calculateDate(phoneDays);
+      // 使用号码本身的到期时间戳计算日期
+      const phoneExpiryDateStr = calculateDate(mgmtData[phone].expiryTimestamp);
 
       detailArea.innerHTML = `
         <div class="mgmt-detail-header">
           <div class="mgmt-detail-title-wrap">
             <div class="mgmt-detail-title">${phone}</div>
-            <div class="mgmt-detail-expiry" onclick="triggerPhoneDatePicker('${phone}', ${phoneDays})">
+            <div class="mgmt-detail-expiry" onclick="triggerPhoneDatePicker('${phone}', ${mgmtData[phone].expiryTimestamp})">
               📅 ${phoneExpiryDateStr}
             </div>
           </div>
@@ -403,10 +435,15 @@ function renderMgmtGrid() {
   });
 }
 
-function triggerPhoneDatePicker(phone, days) {
-  const today = new Date();
-  const targetDate = new Date(today.getTime() + days * 86400000);
-  const dateStr = targetDate.toISOString().split('T')[0];
+function triggerPhoneDatePicker(phone, expiryTimestamp) {
+  let dateStr;
+  if (expiryTimestamp) {
+    const expiryDate = new Date(expiryTimestamp);
+    dateStr = expiryDate.toISOString().split('T')[0];
+  } else {
+    const today = new Date();
+    dateStr = today.toISOString().split('T')[0];
+  }
 
   const formContainer = document.createElement('div');
   formContainer.id = 'phoneDateFormContainer';
@@ -438,7 +475,7 @@ function savePhoneDate(phone) {
   const diffTime = targetDate - today;
   const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
   
-  mgmtData[phone].phoneDays = diffDays;
+  mgmtData[phone].expiryTimestamp = targetDate.getTime();
   saveMgmtData();
   document.getElementById('phoneDateFormContainer').remove();
   renderMgmtGrid();
@@ -455,7 +492,7 @@ function renderPhoneItems(phone) {
   if (!container || !mgmtData[phone]) return;
   
   let html = '';
-  const sortedItems = [...mgmtData[phone].items].sort((a, b) => (parseInt(a.days) || 0) - (parseInt(b.days) || 0));
+  const sortedItems = [...mgmtData[phone].items].sort((a, b) => (calculateRemainingDays(a.expiryTimestamp) || 0) - (calculateRemainingDays(b.expiryTimestamp) || 0));
   
   if (sortedItems.length === 0) {
     html = '<div style="text-align:center; color:#999; font-size:12px; padding:10px;">暂无明细</div>';
@@ -480,7 +517,8 @@ function renderPhoneItems(phone) {
     sortedItems.forEach((item, index) => {
       const realIdx = mgmtData[phone].items.indexOf(item);
       const isDeleted = item.deleted;
-      const expiryDate = calculateDate(item.days);
+      const itemDays = calculateRemainingDays(item.expiryTimestamp);
+      const expiryDate = calculateDate(item.expiryTimestamp);
       const rowStyle = isDeleted ? 'opacity:0.5; background:#f9f9f9;' : '';
       
       let systemColor = '';
@@ -495,7 +533,7 @@ function renderPhoneItems(phone) {
                 <td class="col-nickname" style="color:#007bff; cursor:pointer; text-align:left; padding-left:4px;" onclick="showItemForm('${phone}', ${realIdx})">${index + 1}. ${item.nickname || '未命名'}</td>
                 <td class="col-device">${item.device || '-'}</td>
                 <td class="col-system" style="${systemColor} font-weight:bold;">${item.system || '-'}</td>
-                <td class="col-days" style="color:#28a745;">${item.days || '-'}天</td>
+                <td class="col-days" style="color:#28a745;">${itemDays}天</td>
                 <td class="col-date">${expiryDate}</td>
               </tr>
             </table>
@@ -533,10 +571,18 @@ function deleteFullPhone(phone) {
   }
 }
 
-function calculateDate(days) {
-  if (days === undefined || days === null) return '-';
-  const date = new Date();
-  date.setDate(date.getDate() + parseInt(days));
+function calculateDate(daysOrTimestamp) {
+  if (daysOrTimestamp === undefined || daysOrTimestamp === null) return '-';
+  let date;
+  // 判断是天数还是时间戳
+  if (typeof daysOrTimestamp === 'number' && daysOrTimestamp > 100000) {
+    // 时间戳
+    date = new Date(daysOrTimestamp);
+  } else {
+    // 天数
+    date = new Date();
+    date.setDate(date.getDate() + parseInt(daysOrTimestamp));
+  }
   const y = date.getFullYear().toString().slice(-2);
   const m = date.getMonth() + 1;
   const d = date.getDate();
@@ -551,7 +597,7 @@ function updateSummary() {
   
   phones.forEach(phone => {
     // 统计逻辑保持不变，但预警逻辑可以根据需求调整，这里统一使用phoneDays作为预警标准
-    const pDays = parseInt(mgmtData[phone].phoneDays) || 0;
+    const pDays = calculateRemainingDays(mgmtData[phone].expiryTimestamp);
     
     // 计算该号码是否有有效明细
     const hasValidItem = mgmtData[phone].items.some(it => !it.deleted);
@@ -581,12 +627,18 @@ function toggleExpiringList() {
 
 function showItemForm(phone, idx = -1) {
   const isEdit = idx !== -1;
-  const item = isEdit ? mgmtData[phone].items[idx] : { nickname: '', device: '', days: '', system: '' };
+  const item = isEdit ? mgmtData[phone].items[idx] : { nickname: '', device: '', expiryTimestamp: '', system: '' };
   currentSelectedSystem = item.system || "";
   
   const today = new Date();
-  const currentExpiryDate = item.days ? new Date(today.getTime() + parseInt(item.days) * 86400000) : today;
+  let currentExpiryDate;
+  if (item.expiryTimestamp) {
+    currentExpiryDate = new Date(item.expiryTimestamp);
+  } else {
+    currentExpiryDate = today;
+  }
   const dateStr = currentExpiryDate.toISOString().split('T')[0];
+  const itemDays = calculateRemainingDays(item.expiryTimestamp);
 
   const formContainer = document.createElement('div');
   formContainer.id = 'itemFormContainer';
@@ -619,7 +671,7 @@ function showItemForm(phone, idx = -1) {
       <div style="margin-bottom:15px;">
         <label style="display:block; font-size:11px; color:#666; margin-bottom:2px;">剩余天数</label>
         <div style="display:flex; gap:8px;">
-          <input type="number" id="formDays" value="${item.days}" oninput="syncDateFromDays()" style="width:50%; height:34px; padding:0 10px; border:1px solid #ddd; border-radius:6px; outline:none;">
+          <input type="number" id="formDays" value="${itemDays}" oninput="syncDateFromDays()" style="width:50%; height:34px; padding:0 10px; border:1px solid #ddd; border-radius:6px; outline:none;">
           <button class="quick-btn" onclick="addMonth()" style="height:34px; padding:0 10px; border:1px solid #007bff; background:#fff; color:#007bff; border-radius:4px; font-size:12px;">+30天</button>
         </div>
       </div>
@@ -672,9 +724,14 @@ function addMonth() {
 function saveItem(phone, idx) {
   const nickname = document.getElementById('formNickname').value.trim();
   const device = document.getElementById('formDevice').value.trim();
-  const days = document.getElementById('formDays').value.trim();
-  if (!days) return alert('请输入天数或选择日期');
-  const newItem = { nickname, device, days, system: currentSelectedSystem, deleted: false };
+  const dateVal = document.getElementById('formExpiryDate').value.trim();
+  if (!dateVal) return alert('请选择到期日期');
+  
+  const expiryDate = new Date(dateVal);
+  expiryDate.setHours(0, 0, 0, 0);
+  const expiryTimestamp = expiryDate.getTime();
+  
+  const newItem = { nickname, device, expiryTimestamp, system: currentSelectedSystem, deleted: false };
   if (idx === -1) mgmtData[phone].items.push(newItem);
   else mgmtData[phone].items[idx] = newItem;
   saveMgmtData();
