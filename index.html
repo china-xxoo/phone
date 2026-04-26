@@ -152,19 +152,16 @@
         <div class="summary-row">
           <div style="display: flex; align-items: center; gap: 15px;">
             <div><span class="summary-label">手机号：</span><span class="summary-value" id="totalPhones_pub">0个</span></div>
-            <div><span class="summary-label">状态：</span><span class="summary-value" id="statusStats_pub" style="color:#666; font-weight:normal;">有效 0 / 失效 0</span></div>
-          </div>
-        </div>
-        <div class="summary-row">
-          <div class="expiring-summary" onclick="toggleExpiringList()">
-            <span class="summary-label">7天内到期：</span>
-            <span class="summary-value warning" id="expiringCount_pub">0个 (点击查看)</span>
+            <div class="expiring-summary" onclick="toggleExpiringList()">
+              <span class="summary-label">7天内到期：</span>
+              <span class="summary-value warning" id="expiringCount_pub">0个</span>
+            </div>
           </div>
         </div>
         <div class="summary-row">
           <div class="expiring-summary" onclick="toggleVacancyList()">
             <span class="summary-label">可用空位：</span>
-            <span class="summary-value" id="vacancyCount_pub" style="color: #28a745;">0个 (点击查看)</span>
+            <span class="summary-value" id="vacancyCount_pub" style="color: #28a745;">0个</span>
           </div>
         </div>
       </div>
@@ -607,29 +604,35 @@ function updateSummary() {
       }
     });
 
-    let freeMac = 5 - usedMac;
-    let freeRemoteWin = 1 - usedRemoteWin;
-    let freeNormalWin = 4 - usedNormalWin;
+    let freeMac = Math.max(0, 5 - usedMac);
+    let freeRemoteWin = Math.max(0, 1 - usedRemoteWin);
+    let freeNormalWin = Math.max(0, 4 - usedNormalWin);
 
+    // 只有当至少有一个类型的名额大于 0 时，才显示在空位面板中
     if (freeMac > 0 || freeRemoteWin > 0 || freeNormalWin > 0) {
       vacancyCount++;
-      // 优化显示格式：手机号 Mac:x/远W:x/W:x
-      const infoText = `Mac:${freeMac}/远W:${freeRemoteWin}/W:${freeNormalWin}`;
+      const pDays = calculateRemainingDays(mgmtData[phone].expiryTimestamp);
       
       vacancyHtml += `
-        <div class="vacancy-card" onclick="togglePhoneDetail('${phone}')" style="flex-direction: row; justify-content: space-between; align-items: center; padding: 8px;">
+        <div class="vacancy-card" onclick="togglePhoneDetail('${phone}')" style="flex-direction: row; justify-content: space-between; align-items: center; padding: 6px 10px;">
           <span class="vacancy-phone">${phone}</span>
-          <span style="font-size: 11px; color: #276749; font-weight: bold;">${infoText}</span>
+          <div style="display: flex; flex-direction: column; align-items: flex-end; gap: 2px;">
+            <div style="font-size: 11px; color: #276749; font-weight: bold;">
+              Mac:${freeMac} / <span style="${pDays <= 7 ? 'color:red;' : ''}">${pDays}天</span>
+            </div>
+            <div style="font-size: 10px; color: #2f855a;">
+              远W:${freeRemoteWin} / W:${freeNormalWin}
+            </div>
+          </div>
         </div>`;
     }
   });
 
   document.getElementById('totalPhones_pub').innerText = phones.length + '个';
-  document.getElementById('statusStats_pub').innerText = `有效 ${totalValid} / 失效 ${totalInvalid}`;
-  document.getElementById('expiringCount_pub').innerText = `${expiringCount}个 (点击查看)`;
+  document.getElementById('expiringCount_pub').innerText = `${expiringCount}个`;
   document.getElementById('expiringListContainer').innerHTML = expiringHtml + '</div>';
   
-  document.getElementById('vacancyCount_pub').innerText = `${vacancyCount}个 (点击查看)`;
+  document.getElementById('vacancyCount_pub').innerText = `${vacancyCount}个`;
   document.getElementById('vacancyListContainer').innerHTML = vacancyHtml + '</div>';
 }
 
