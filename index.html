@@ -569,7 +569,7 @@ function calculateDate(daysOrTimestamp) {
 
 function updateSummary() {
   const phones = Object.keys(mgmtData);
-  let totalValid = 0, totalInvalid = 0, expiringCount = 0, vacancyCount = 0;
+  let totalValid = 0, totalInvalid = 0, expiringItemCount = 0, vacancyCount = 0;
   let totalFreeMac = 0, totalFreeRemoteWin = 0, totalFreeNormalWin = 0;
   let expiringHtml = '<div class="expiring-grid">';
   let vacancyHtml = '<div class="vacancy-grid">';
@@ -577,21 +577,30 @@ function updateSummary() {
   phones.forEach(phone => {
     const validItems = mgmtData[phone].items.filter(it => !it.deleted);
     
-    // 1. 到期统计逻辑
+    // 1. 到期统计逻辑 (统计明细项总数)
     if (validItems.length === 0 && mgmtData[phone].items.length > 0) {
       totalInvalid++;
     } else {
       totalValid++;
+      let phoneExpiringItems = 0;
       let minItemDays = Infinity;
+      
       validItems.forEach(it => {
         const d = calculateRemainingDays(it.expiryTimestamp);
-        if (d < minItemDays) minItemDays = d;
+        // 仅统计未失效（天数 > 0）且在 7 天内的明细
+        if (d > 0 && d <= 7) {
+          expiringItemCount++; 
+          phoneExpiringItems++;
+          if (d < minItemDays) minItemDays = d;
+        }
       });
-      if (minItemDays <= 7) {
-        expiringCount++;
+
+      if (phoneExpiringItems > 0) {
+        // 如果该手机号有到期明细，显示在列表中，并标注该号码下有多少项到期
+        const badge = phoneExpiringItems > 1 ? `<span style="font-size:10px; background:#fed2d2; color:#c53030; padding:0 4px; border-radius:10px; margin-left:4px;">${phoneExpiringItems}项</span>` : '';
         expiringHtml += `
           <div class="summary-list-card" onclick="togglePhoneDetail('${phone}')">
-            <span class="summary-list-phone">${phone}</span>
+            <span class="summary-list-phone">${phone}${badge}</span>
             <span style="font-size: 11px; color: #dc3545; font-weight: bold;">${minItemDays}天</span>
           </div>`;
       }
@@ -636,7 +645,7 @@ function updateSummary() {
   });
 
   document.getElementById('totalPhones_pub').innerText = phones.length + '个';
-  document.getElementById('expiringCount_pub').innerText = `${expiringCount}个`;
+  document.getElementById('expiringCount_pub').innerText = `${expiringItemCount}个`;
   document.getElementById('expiringListContainer').innerHTML = expiringHtml + '</div>';
   
   // 更新可用空位标题，包含分类总和，颜色同步
