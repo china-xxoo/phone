@@ -164,36 +164,6 @@ function getRealTimeDays(item) {
   return Math.max(parseInt(item.days) - passed, 0);
 }
 
-// ====================== 我只改了这里！！！ ======================
-// 【展开后点击日历】修改到期日
-function editPhoneExpiry(phone){
-  const p = mgmtData[phone];
-  const current = p.phoneExpireDate || new Date().toISOString().split('T')[0];
-  
-  const picker = document.createElement('input');
-  picker.type = 'date';
-  picker.value = current;
-  
-  picker.style.position = 'fixed';
-  picker.style.zIndex = '99999';
-  picker.style.top = '50%';
-  picker.style.left = '50%';
-  picker.style.transform = 'translate(-50%,-50%)';
-  document.body.appendChild(picker);
-  
-  picker.onchange = () => {
-    p.phoneExpireDate = picker.value;
-    saveMgmtData();
-    renderMgmtGrid(); // 自动同步外面倒计时
-    document.body.removeChild(picker);
-  };
-  picker.onblur = () => {
-    document.body.removeChild(picker);
-  };
-  picker.focus();
-}
-
-// 【外面倒计时】从日历自动计算
 function getPhoneRemainDays(phone){
   const p = mgmtData[phone];
   if(!p.phoneExpireDate) return null;
@@ -202,7 +172,23 @@ function getPhoneRemainDays(phone){
   const diff = Math.ceil((ed - td)/86400000);
   return Math.max(diff, 0);
 }
-// ==============================================================
+
+function editPhoneExpiry(phone){
+  const p = mgmtData[phone];
+  const current = p.phoneExpireDate || new Date().toISOString().split('T')[0];
+  const picker = document.createElement('input');
+  picker.type = 'date';
+  picker.value = current;
+  picker.style.position = 'fixed';
+  picker.style.zIndex = '99999';
+  picker.style.top = '50%';
+  picker.style.left = '50%';
+  picker.style.transform = 'translate(-50%,-50%)';
+  document.body.appendChild(picker);
+  picker.onchange = () => { p.phoneExpireDate = picker.value; saveMgmtData(); renderMgmtGrid(); document.body.removeChild(picker); };
+  picker.onblur = () => { document.body.removeChild(picker); };
+  picker.focus();
+}
 
 function checkLogin() {
   const input = document.getElementById('loginPwd').value;
@@ -287,17 +273,9 @@ function renderMgmtGrid(){
       badge = `<div class="mgmt-card-badge ${cls}">${minD}</div>`;
     }
 
-    const box = phoneDays!==null ? 
-      `<div class="mgmt-card-days-box ${phoneDays<=7?'warning':''}">${phoneDays}</div>` : '';
+    const box = phoneDays!==null ? `<div class="mgmt-card-days-box ${phoneDays<=7?'warning':''}">${phoneDays}</div>` : '';
 
-    c.innerHTML = `
-      <div class="mgmt-card-phone">${phone}</div>
-      <div class="mgmt-card-days-container">${box}</div>
-      <div class="mgmt-card-stats">
-        <span class="stat-win">${win}</span>/<span class="stat-mac">${mac}</span>
-      </div>
-      ${badge}
-    `;
+    c.innerHTML = `<div class="mgmt-card-phone">${phone}</div><div class="mgmt-card-days-container">${box}</div><div class="mgmt-card-stats"><span class="stat-win">${win}</span>/<span class="stat-mac">${mac}</span></div>${badge}`;
     g.appendChild(c);
 
     if(phone===expandedPhone){
@@ -312,17 +290,7 @@ function renderMgmtGrid(){
         const d = ed.getDate();
         txt = `${y}.${m}.${d}`;
       }
-      da.innerHTML = `
-        <div class="mgmt-detail-header">
-          <div><div class="mgmt-detail-title">${phone}</div>
-          <div class="mgmt-detail-expiry" onclick="editPhoneExpiry('${phone}')">${txt}</div></div>
-          <div>
-            <button class="detail-action-btn" style="background:#28a745" onclick="showItemForm('${phone}')">添加</button>
-            <button class="detail-action-btn" style="background:#dc3545" onclick="deleteFullPhone('${phone}')">删号</button>
-          </div>
-        </div>
-        <div id="items-${phone}"></div>
-      `;
+      da.innerHTML = `<div class="mgmt-detail-header"><div><div class="mgmt-detail-title">${phone}</div><div class="mgmt-detail-expiry" onclick="editPhoneExpiry('${phone}')">${txt}</div></div><div><button class="detail-action-btn" style="background:#28a745" onclick="showItemForm('${phone}')">添加</button><button class="detail-action-btn" style="background:#dc3545" onclick="deleteFullPhone('${phone}')">删号</button></div></div><div id="items-${phone}"></div>`;
       g.appendChild(da);
       renderPhoneItems(phone);
     }
@@ -342,46 +310,14 @@ function renderPhoneItems(phone){
   if(sorted.length===0){
     html = '<div style="text-align:center; padding:10px; color:#999">暂无明细</div>';
   } else {
-    html = `
-      <div class="mgmt-item-row" style="background:#fafafa">
-        <div class="mgmt-item-table-wrapper">
-          <table class="mgmt-detail-table">
-            <tr>
-              <th class="col-nickname">昵称</th>
-              <th class="col-device">设备</th>
-              <th class="col-system">系统</th>
-              <th class="col-days">剩余</th>
-              <th class="col-date">到期</th>
-            </tr>
-          </table>
-        </div>
-        <div class="mgmt-item-actions" style="background:#fafafa; font-size:10px; align-items:center; justify-content:center">操作</div>
-      </div>
-    `;
+    html = `<div class="mgmt-item-row" style="background:#fafafa"><div class="mgmt-item-table-wrapper"><table class="mgmt-detail-table"><tr><th class="col-nickname">昵称</th><th class="col-device">设备</th><th class="col-system">系统</th><th class="col-days">剩余</th><th class="col-date">到期</th></tr></table></div><div class="mgmt-item-actions" style="background:#fafafa; font-size:10px; align-items:center; justify-content:center">操作</div></div>`;
     sorted.forEach((it,i)=>{
       const rid = mgmtData[phone].items.indexOf(it);
       const del = it.deleted;
       const rd = getRealTimeDays(it);
       const ed = calculateDate(rd);
       const color = it.system==='Mac'?'#007bff':(it.system==='Win'?'#dc3545':'');
-      html += `
-        <div class="mgmt-item-row" style="${del?'opacity:0.5':''}">
-          <div class="mgmt-item-table-wrapper">
-            <table class="mgmt-detail-table">
-              <tr>
-                <td class="col-nickname" style="color:#007bff; text-align:left; padding-left:4px; cursor:pointer" onclick="showItemForm('${phone}',${rid})">${i+1}. ${it.nickname||''}</td>
-                <td class="col-device">${it.device||'-'}</td>
-                <td class="col-system" style="color:${color}; font-weight:bold">${it.system||'-'}</td>
-                <td class="col-days" style="color:#28a745">${rd}天</td>
-                <td class="col-date">${ed}</td>
-              </tr>
-            </table>
-          </div>
-          <div class="mgmt-item-actions">
-            <button class="mgmt-btn" onclick="handleItemAction('${phone}',${rid},'${del?'restore':'fail'}')">${del?'恢复':'失效'}</button>
-          </div>
-        </div>
-      `;
+      html += `<div class="mgmt-item-row" style="${del?'opacity:0.5':''}"><div class="mgmt-item-table-wrapper"><table class="mgmt-detail-table"><tr><td class="col-nickname" style="color:#007bff; text-align:left; padding-left:4px; cursor:pointer" onclick="showItemForm('${phone}',${rid})">${i+1}. ${it.nickname||''}</td><td class="col-device">${it.device||'-'}</td><td class="col-system" style="color:${color}; font-weight:bold">${it.system||'-'}</td><td class="col-days" style="color:#28a745">${rd}天</td><td class="col-date">${ed}</td></tr></table></div><div class="mgmt-item-actions"><button class="mgmt-btn" onclick="handleItemAction('${phone}',${rid},'${del?'restore':'fail'}')">${del?'恢复':'失效'}</button></div></div>`;
     });
   }
   el.innerHTML = html;
@@ -449,30 +385,7 @@ function showItemForm(phone,idx=-1){
   const f = document.createElement('div');
   f.id='itemFormContainer';
   f.style.cssText='position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.5);display:flex;justify-content:center;align-items:center;z-index:99999';
-  f.innerHTML = `
-    <div style="background:#fff;padding:20px;border-radius:12px;width:90%;max-width:320px">
-      <div style="display:flex;justify-content:space-between;margin-bottom:15px">
-        <h3>${isEdit?'编辑':'添加'}</h3>
-        <span onclick="document.getElementById('itemFormContainer').remove()" style="cursor:pointer;font-size:24px">×</span>
-      </div>
-      <div style="margin-bottom:10px"><label>昵称</label><input id="formNickname" value="${it.nickname}" style="width:100%;height:34px;border:1px solid #ddd;border-radius:6px;padding:0 10px"></div>
-      <div style="margin-bottom:10px"><label>设备</label><input id="formDevice" value="${it.device}" style="width:100%;height:34px;border:1px solid #ddd;border-radius:6px;padding:0 10px"></div>
-      <div style="margin-bottom:10px"><label>系统</label><div style="display:flex;gap:10px">
-        <button onclick="selectSystem('Win')" style="flex:1;height:30px;border:1px solid #007bff;background:${currentSelectedSystem==='Win'?'#007bff':'#fff'};color:${currentSelectedSystem==='Win'?'#fff':'#007bff'}">Win</button>
-        <button onclick="selectSystem('Mac')" style="flex:1;height:30px;border:1px solid #007bff;background:${currentSelectedSystem==='Mac'?'#007bff':'#fff'};color:${currentSelectedSystem==='Mac'?'#fff':'#007bff'}">Mac</button>
-      </div></div>
-      <div style="margin-bottom:10px"><label>到期日期</label><input type="date" id="formExpiryDate" value="${dateStr}" onchange="syncDaysFromDate()" style="width:100%;height:34px;border:1px solid #ddd;border-radius:6px"></div>
-      <div style="margin-bottom:15px"><label>剩余天数</label>
-      <div style="display:flex;gap:8px">
-        <input type="number" id="formDays" value="${it.days||rd}" oninput="syncDateFromDays()" style="width:50%;height:34px;border:1px solid #ddd;border-radius:6px">
-        <button onclick="addMonth()" style="height:34px;border:1px solid #007bff;background:#fff;color:#007bff">+30天</button>
-      </div></div>
-      <div style="display:flex;gap:10px">
-        ${isEdit?'<button onclick="handleItemAction(\''+phone+'\','+idx+',\'delete\');document.getElementById(\'itemFormContainer\').remove()" style="flex:1;height:40px;background:#dc3545;color:#fff;border:none;border-radius:6px">删除</button>':''}
-        <button onclick="saveItem('${phone}',${idx})" style="flex:2;height:40px;background:#007bff;color:#fff;border:none;border-radius:6px">保存</button>
-      </div>
-    </div>
-  `;
+  f.innerHTML = `<div style="background:#fff;padding:20px;border-radius:12px;width:90%;max-width:320px"><div style="display:flex;justify-content:space-between;margin-bottom:15px"><h3>${isEdit?'编辑':'添加'}</h3><span onclick="document.getElementById('itemFormContainer').remove()" style="cursor:pointer;font-size:24px">×</span></div><div style="margin-bottom:10px"><label>昵称</label><input id="formNickname" value="${it.nickname}" style="width:100%;height:34px;border:1px solid #ddd;border-radius:6px;padding:0 10px"></div><div style="margin-bottom:10px"><label>设备</label><input id="formDevice" value="${it.device}" style="width:100%;height:34px;border:1px solid #ddd;border-radius:6px;padding:0 10px"></div><div style="margin-bottom:10px"><label>系统</label><div style="display:flex;gap:10px"><button onclick="selectSystem('Win')" style="flex:1;height:30px;border:1px solid #007bff;background:${currentSelectedSystem==='Win'?'#007bff':'#fff'};color:${currentSelectedSystem==='Win'?'#fff':'#007bff'}">Win</button><button onclick="selectSystem('Mac')" style="flex:1;height:30px;border:1px solid #007bff;background:${currentSelectedSystem==='Mac'?'#007bff':'#fff'};color:${currentSelectedSystem==='Mac'?'#fff':'#007bff'}">Mac</button></div></div><div style="margin-bottom:10px"><label>到期日期</label><input type="date" id="formExpiryDate" value="${dateStr}" onchange="syncDaysFromDate()" style="width:100%;height:34px;border:1px solid #ddd;border-radius:6px"></div><div style="margin-bottom:15px"><label>剩余天数</label><div style="display:flex;gap:8px"><input type="number" id="formDays" value="${it.days||rd}" oninput="syncDateFromDays()" style="width:50%;height:34px;border:1px solid #ddd;border-radius:6px"><button onclick="addMonth()" style="height:34px;border:1px solid #007bff;background:#fff;color:#007bff">+30天</button></div></div><div style="display:flex;gap:10px">${isEdit?'<button onclick="handleItemAction(\''+phone+'\','+idx+',\'delete\');document.getElementById(\'itemFormContainer\').remove()" style="flex:1;height:40px;background:#dc3545;color:#fff;border:none;border-radius:6px">删除</button>':''}<button onclick="saveItem('${phone}',${idx})" style="flex:2;height:40px;background:#007bff;color:#fff;border:none;border-radius:6px">保存</button></div></div>`;
   document.body.appendChild(f);
 }
 
