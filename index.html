@@ -290,21 +290,27 @@ function renderMgmtGrid() {
     // 号码本身的倒计时
     const phoneDays = parseInt(mgmtData[phone].phoneDays) || 0;
     
-    // 统计明细
+    // 统计明细及寻找明细中的最小天数
     let macCount = 0;
     let winCount = 0;
+    let minItemDays = Infinity;
     mgmtData[phone].items.forEach(it => {
       if (!it.deleted) {
         if (it.system === 'Mac') macCount++;
         else if (it.system === 'Win') winCount++;
+        const d = parseInt(it.days) || 0;
+        if (d < minItemDays) minItemDays = d;
       }
     });
 
-    let badgeClass = '';
-    if (phoneDays <= 3) badgeClass = ''; 
-    else if (phoneDays <= 7) badgeClass = 'warning';
-    else badgeClass = 'safe';
-    const badgeHtml = `<div class="mgmt-card-badge ${badgeClass}">${phoneDays}</div>`;
+    let badgeHtml = '';
+    if (minItemDays !== Infinity) {
+      let badgeClass = '';
+      if (minItemDays <= 3) badgeClass = ''; 
+      else if (minItemDays <= 7) badgeClass = 'warning';
+      else badgeClass = 'safe';
+      badgeHtml = `<div class="mgmt-card-badge ${badgeClass}">${minItemDays}</div>`;
+    }
 
     // 手机号和统计之间的天数方框容器
     const daysBoxHtml = `<div class="mgmt-card-days-container"><div class="mgmt-card-days-box ${phoneDays <= 7 ? 'warning' : ''}">${phoneDays}</div></div>`;
