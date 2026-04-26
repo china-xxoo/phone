@@ -49,17 +49,15 @@
   .add-input-group input { flex: 1; height: 36px; border: 1px solid #ddd; border-radius: 6px; padding: 0 10px; font-size: 14px; outline: none; }
   .btn-confirm-add { background: #28a745; color: #fff; border: none; padding: 0 15px; border-radius: 6px; font-weight: bold; cursor: pointer; }
 
-  #expiringListContainer, #vacancyListContainer { display: none; margin: 10px 0; border-radius: 8px; padding: 8px; width: 100%; max-width: 360px; }
-  #expiringListContainer { background: #fff5f5; border: 1px solid #feb2b2; }
-  #vacancyListContainer { background: #f0fff4; border: 1px solid #9ae6b4; }
-  .expiring-grid, .vacancy-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; }
-  .vacancy-card { background: #fff; border: 1px solid #9ae6b4; border-radius: 6px; padding: 6px; cursor: pointer; display: flex; flex-direction: column; gap: 2px; }
-  .vacancy-phone { color: #2f855a; font-weight: bold; font-size: 13px; }
-  .vacancy-info { color: #276749; font-size: 10px; display: flex; gap: 4px; }
-  .vacancy-tag { background: #e6fffa; padding: 0 3px; border-radius: 2px; border: 1px solid #b2f5ea; }
-  .expiring-card { background: #fff; border: 1px solid #feb2b2; border-radius: 6px; padding: 6px; cursor: pointer; display: flex; justify-content: space-between; align-items: center; }
-  .expiring-phone { color: #c53030; font-weight: bold; font-size: 13px; }
-  .expiring-days { color: #742a2a; font-size: 11px; }
+  #expiringListContainer, #vacancyListContainer { display: none; margin: 8px 0; width: 100%; max-width: 360px; }
+  .expiring-grid, .vacancy-grid { display: grid; grid-template-columns: repeat(2, 1fr); column-gap: 6px; row-gap: 6px; }
+  /* 统一使用 mgmt-card 风格 */
+  .summary-list-card { 
+    background: #f9f9f9; border: 1px solid #ddd; border-radius: 4px; height: 34px; padding: 0 8px; 
+    cursor: pointer; display: flex; align-items: center; justify-content: space-between; 
+  }
+  .summary-list-card:active { background: #e7f3ff; }
+  .summary-list-phone { font-weight: bold; font-size: 12px; color: #007bff; }
 
   .mgmt-section { margin-top: 8px; padding-top: 6px; border-top: 1px solid #eee; }
   .mgmt-header-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; cursor: pointer; }
@@ -572,6 +570,7 @@ function calculateDate(daysOrTimestamp) {
 function updateSummary() {
   const phones = Object.keys(mgmtData);
   let totalValid = 0, totalInvalid = 0, expiringCount = 0, vacancyCount = 0;
+  let totalFreeMac = 0, totalFreeRemoteWin = 0, totalFreeNormalWin = 0;
   let expiringHtml = '<div class="expiring-grid">';
   let vacancyHtml = '<div class="vacancy-grid">';
 
@@ -590,11 +589,15 @@ function updateSummary() {
       });
       if (minItemDays <= 7) {
         expiringCount++;
-        expiringHtml += `<div class="expiring-card" onclick="togglePhoneDetail('${phone}')"><span class="expiring-phone">${phone}</span><span class="expiring-days">${minItemDays}天</span></div>`;
+        expiringHtml += `
+          <div class="summary-list-card" onclick="togglePhoneDetail('${phone}')">
+            <span class="summary-list-phone">${phone}</span>
+            <span style="font-size: 11px; color: #dc3545; font-weight: bold;">${minItemDays}天</span>
+          </div>`;
       }
     }
 
-    // 2. 空位统计逻辑 (配额: Mac 5, 远Win 1, 正常Win 1)
+    // 2. 空位统计逻辑 (配额: Mac 5, 远Win 1, 正常Win 4)
     let usedMac = 0, usedRemoteWin = 0, usedNormalWin = 0;
     validItems.forEach(it => {
       if (it.system === 'Mac') usedMac++;
@@ -608,21 +611,26 @@ function updateSummary() {
     let freeRemoteWin = Math.max(0, 1 - usedRemoteWin);
     let freeNormalWin = Math.max(0, 4 - usedNormalWin);
 
+    // 累加总空位
+    totalFreeMac += freeMac;
+    totalFreeRemoteWin += freeRemoteWin;
+    totalFreeNormalWin += freeNormalWin;
+
     // 只有当至少有一个类型的名额大于 0 时，才显示在空位面板中
     if (freeMac > 0 || freeRemoteWin > 0 || freeNormalWin > 0) {
       vacancyCount++;
       const pDays = calculateRemainingDays(mgmtData[phone].expiryTimestamp);
       
       vacancyHtml += `
-        <div class="vacancy-card" onclick="togglePhoneDetail('${phone}')" style="flex-direction: row; justify-content: space-between; align-items: center; padding: 6px 10px;">
-          <span class="vacancy-phone">${phone}</span>
-          <div style="display: flex; flex-direction: column; align-items: flex-end; gap: 2px;">
-            <div style="font-size: 11px; color: #276749; font-weight: bold;">
-              Mac:${freeMac} / <span style="${pDays <= 7 ? 'color:red;' : ''}">${pDays}天</span>
-            </div>
-            <div style="font-size: 10px; color: #2f855a;">
-              远W:${freeRemoteWin} / W:${freeNormalWin}
-            </div>
+        <div class="summary-list-card" onclick="togglePhoneDetail('${phone}')">
+          <span class="summary-list-phone">${phone}</span>
+          <div style="display: flex; align-items: center; gap: 6px;">
+            <span style="font-size: 11px; font-weight: bold;">
+              <span style="color: #28a745;">${freeMac}</span>/ 
+              <span style="color: #dc3545;">${freeRemoteWin}</span>/ 
+              <span style="color: #fd7e14;">${freeNormalWin}</span>
+            </span>
+            <span style="font-size: 10px; color: #999; min-width: 30px; text-align: right; ${pDays <= 7 ? 'color:red; font-weight:bold;' : ''}">${pDays}天</span>
           </div>
         </div>`;
     }
@@ -632,7 +640,9 @@ function updateSummary() {
   document.getElementById('expiringCount_pub').innerText = `${expiringCount}个`;
   document.getElementById('expiringListContainer').innerHTML = expiringHtml + '</div>';
   
-  document.getElementById('vacancyCount_pub').innerText = `${vacancyCount}个`;
+  // 更新可用空位标题，包含分类总和
+  const vacancyTitle = `${vacancyCount}个 (M:${totalFreeMac} 远W:${totalFreeRemoteWin} W:${totalFreeNormalWin})`;
+  document.getElementById('vacancyCount_pub').innerText = vacancyTitle;
   document.getElementById('vacancyListContainer').innerHTML = vacancyHtml + '</div>';
 }
 
