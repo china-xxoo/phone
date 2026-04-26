@@ -162,7 +162,7 @@
 
   <div class="login-box">
     <h2>身份验证</h2>
-    <input type="password" id="loginPwd" value="" autocomplete="off" placeholder="请输入密码" onkeydown="if(event.keyCode==13) checkLogin()">
+    <input type="password" id="loginPwd" autocomplete="new-password" placeholder="请输入密码" onkeydown="if(event.keyCode==13) checkLogin()">
     <button onclick="checkLogin()">登录</button>
   </div>
 </div>
@@ -789,7 +789,12 @@ async function refreshFromGist() {
 }
 
 window.onload = () => {
-  document.getElementById('loginPwd').value = ''; // 强制清空密码框
+  // 采用双重保险清空密码框：立即清空 + 100ms延时清空（对付浏览器的强制自动填充）
+  const pwdInput = document.getElementById('loginPwd');
+  if (pwdInput) {
+    pwdInput.value = '';
+    setTimeout(() => { pwdInput.value = ''; }, 100);
+  }
   loadMgmtData();
   updateSummary();
 };
