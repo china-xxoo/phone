@@ -8,7 +8,6 @@
 <meta name="apple-mobile-web-app-title" content="号码管理">
 <meta name="mobile-web-app-capable" content="yes">
 
-<!-- 最终图标修复：使用 180x180 标准尺寸，并提供 CDN + Base64 双重保障 -->
 <link rel="apple-touch-icon" href="https://files.manuscdn.com/user_upload_by_module/session_file/310519663558497806/iCreqVeuUaumaWNL.png">
 <link rel="apple-touch-icon-precomposed" href="https://files.manuscdn.com/user_upload_by_module/session_file/310519663558497806/iCreqVeuUaumaWNL.png">
 <link rel="icon" type="image/png" sizes="180x180" href="https://files.manuscdn.com/user_upload_by_module/session_file/310519663558497806/iCreqVeuUaumaWNL.png">
@@ -20,7 +19,6 @@
   * { margin: 0; padding: 0; box-sizing: border-box; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; }
   body { background: #f0f2f5; padding: 8px 24px; max-width: 450px; margin: 0 auto; color: #333; font-size: 14px; }
   
-  /* 登录界面样式 */
   #loginOverlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #f0f2f5; z-index: 100000; display: flex; flex-direction: column; align-items: center; padding: 20px; overflow-y: auto; }
   .login-box { background: #fff; padding: 24px; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); width: 100%; max-width: 360px; text-align: center; margin-top: 10px; }
   .login-box h2 { margin-bottom: 20px; font-size: 18px; color: #333; }
@@ -75,11 +73,10 @@
   .mgmt-card.active { background: #e7f3ff; border-color: #007bff; }
   .mgmt-card-phone { font-weight: bold; font-size: 12px; color: #007bff; pointer-events: none; flex: 0 1 auto; text-align: left; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-right: 4px; }
 
-  /* 外层天数方框样式 - 在空白区域居中 */
   .mgmt-card-days-container {
-    flex: 1; /* 占据中间所有剩余空间 */
+    flex: 1;
     display: flex;
-    justify-content: center; /* 在剩余空间内水平居中 */
+    justify-content: center;
     align-items: center;
     pointer-events: none;
   }
@@ -112,7 +109,7 @@
   .mgmt-detail-header { display: flex; justify-content: space-between; align-items: center; padding: 8px 12px; border-bottom: 1px solid #f0f0f0; }
   .mgmt-detail-title-wrap { display: flex; align-items: center; gap: 8px; }
   .mgmt-detail-title { font-weight: bold; font-size: 14px; color: #333; }
-  .mgmt-detail-expiry { font-size: 11px; color: #666; display: flex; align-items: center; gap: 3px; }
+  .mgmt-detail-expiry { font-size: 11px; color:#007bff; cursor:pointer; text-decoration:underline; display: flex; align-items: center; gap: 3px; }
   .mgmt-detail-btns { display: flex; gap: 6px; }
   .detail-action-btn { font-size: 11px; padding: 2px 8px; border-radius: 4px; border: none; color: #fff; cursor: pointer; font-weight: bold; }
 
@@ -124,8 +121,8 @@
   .col-nickname { width: 28%; }
   .col-device { width: 22%; }
   .col-system { width: 10%; }
-  .col-days { width: 20%; /* 原12% + 8%（从date列缩减的三分之一） */ }
-  .col-date { width: 20%; /* 原28% 缩减三分之一后约18.67%，取整为20% */ }
+  .col-days { width: 20%; }
+  .col-date { width: 20%; }
 
   .mgmt-item-row { display: flex; align-items: stretch; gap: 0; padding: 0; border-bottom: 1px solid #f0f0f0; }
   .mgmt-item-row:last-child { border-bottom: none; }
@@ -136,7 +133,6 @@
 </head>
 <body>
 
-<!-- 登录遮罩层 -->
 <div id="loginOverlay">
   <div class="summary-panel" id="publicSummary">
     <div class="summary-main">
@@ -198,29 +194,18 @@ let expandedPhone = null;
 let currentSelectedSystem = "";
 let phoneOrder = [];
 
-// ========== 新增：实时计算剩余天数核心函数 ==========
 function getRealTimeDays(item) {
   if (!item.days || !item.baseDate) {
-    // 兼容旧数据：无基准日期时，使用原days（首次新增后自动带baseDate）
     return parseInt(item.days) || 0;
   }
-  // 基准日期（录入时）
   const baseDate = new Date(item.baseDate);
   baseDate.setHours(0, 0, 0, 0);
-  
-  // 今天的日期
   const today = new Date();
   today.setHours(0, 0, 0, 0);
-  
-  // 计算从基准日期到今天的天数差
   const daysPassed = Math.ceil((today - baseDate) / (1000 * 60 * 60 * 24));
-  
-  // 实时剩余天数 = 初始天数 - 已过去的天数（最小为0）
   const realTimeDays = Math.max(parseInt(item.days) - daysPassed, 0);
-  
   return realTimeDays;
 }
-// ========== 新增结束 ==========
 
 function checkLogin() {
   const input = document.getElementById('loginPwd').value;
@@ -277,7 +262,7 @@ function addNewPhone() {
   const phone = document.getElementById('inputPhone').value.trim();
   if (!phone) return alert('请输入手机号');
   if (mgmtData[phone]) return alert('该手机号已存在');
-  mgmtData[phone] = { items: [] };
+  mgmtData[phone] = { items: [], phoneDays: null, phoneBaseDate: null };
   phoneOrder.push(phone);
   saveMgmtData();
   document.getElementById('inputPhone').value = '';
@@ -304,17 +289,25 @@ function renderMgmtGrid() {
     let minDays = Infinity;
     let macCount = 0;
     let winCount = 0;
+    let phoneTotalDays = null;
 
     mgmtData[phone].items.forEach(it => {
       if (!it.deleted) {
-        // ========== 修改：改用实时天数 ==========
         const d = getRealTimeDays(it);
-        // ========== 修改结束 ==========
         if (d < minDays) minDays = d;
         if (it.system === 'Mac') macCount++;
         else if (it.system === 'Win') winCount++;
       }
     });
+
+    const pd = mgmtData[phone].phoneDays;
+    const pbd = mgmtData[phone].phoneBaseDate;
+    if(pd && pbd){
+      const bd = new Date(pbd); bd.setHours(0,0,0,0);
+      const td = new Date(); td.setHours(0,0,0,0);
+      const passed = Math.ceil((td-bd)/(1000*60*60*24));
+      phoneTotalDays = Math.max(parseInt(pd)-passed,0);
+    }
 
     let badgeHtml = '';
     if (minDays !== Infinity) {
@@ -325,9 +318,8 @@ function renderMgmtGrid() {
       badgeHtml = `<div class="mgmt-card-badge ${badgeClass}">${minDays}</div>`;
     }
 
-    // 手机号和统计之间的天数方框容器 - 去掉"天"字
-    const daysBoxHtml = minDays !== Infinity ? 
-      `<div class="mgmt-card-days-container"><div class="mgmt-card-days-box ${minDays <= 7 ? 'warning' : ''}">${minDays}</div></div>` : 
+    const daysBoxHtml = phoneTotalDays!==null ? 
+      `<div class="mgmt-card-days-container"><div class="mgmt-card-days-box ${phoneTotalDays <= 7 ? 'warning' : ''}">${phoneTotalDays}</div></div>` : 
       `<div class="mgmt-card-days-container"></div>`;
 
     const statsHtml = `<div class="mgmt-card-stats">
@@ -372,7 +364,7 @@ function renderMgmtGrid() {
       }
       e.preventDefault();
       const touch = e.touches[0];
-      const target = document.elementFromPoint(touch.clientX, touch.clientY);
+      const target = document.elementFromPoint(touch.clientX, clientY);
       const overCard = target ? target.closest('.mgmt-card') : null;
       
       if (overCard && overCard !== card) {
@@ -394,18 +386,21 @@ function renderMgmtGrid() {
       const detailArea = document.createElement('div');
       detailArea.className = 'mgmt-detail-area active';
       
-      // 计算该手机号的最早到期日期
-      let earliestDateStr = '-';
-      if (minDays !== Infinity) {
-        earliestDateStr = calculateDate(minDays);
+      let displayDate = "-";
+      const p = mgmtData[phone];
+      if(p.phoneDays && p.phoneBaseDate){
+        const bd = new Date(p.phoneBaseDate); bd.setHours(0,0,0,0);
+        const td = new Date(); td.setHours(0,0,0,0);
+        const passed = Math.ceil((td-bd)/(1000*60*60*24));
+        const rem = Math.max(parseInt(p.phoneDays)-passed,0);
+        displayDate = calculateDate(rem);
       }
 
-      // 去掉日历图标，按钮文字改为"添加"和"删号"
       detailArea.innerHTML = `
         <div class="mgmt-detail-header">
           <div class="mgmt-detail-title-wrap">
             <div class="mgmt-detail-title">${phone}</div>
-            <div class="mgmt-detail-expiry">${earliestDateStr}</div>
+            <div class="mgmt-detail-expiry" onclick="editPhoneExpiry('${phone}')">${displayDate}</div>
           </div>
           <div class="mgmt-detail-btns">
             <button class="detail-action-btn" style="background:#28a745;" onclick="showItemForm('${phone}')">添加</button>
@@ -420,6 +415,25 @@ function renderMgmtGrid() {
   });
 }
 
+function editPhoneExpiry(phone){
+  const obj = mgmtData[phone];
+  let currentDays = "";
+  if(obj.phoneDays && obj.phoneBaseDate){
+    const bd = new Date(obj.phoneBaseDate); bd.setHours(0,0,0,0);
+    const td = new Date(); td.setHours(0,0,0,0);
+    const passed = Math.ceil((td-bd)/(1000*60*60*24));
+    currentDays = Math.max(parseInt(obj.phoneDays)-passed,0);
+  }
+  const newDays = prompt("设置手机号整体到期剩余天数", currentDays);
+  if(newDays===null) return;
+  const nd = parseInt(newDays);
+  if(isNaN(nd) || nd<0) return alert("请输入有效数字");
+  obj.phoneDays = nd;
+  obj.phoneBaseDate = new Date().toISOString().split('T')[0];
+  saveMgmtData();
+  renderMgmtGrid();
+}
+
 function togglePhoneDetail(phone) {
   expandedPhone = (expandedPhone === phone) ? null : phone;
   renderMgmtGrid();
@@ -430,9 +444,7 @@ function renderPhoneItems(phone) {
   if (!container || !mgmtData[phone]) return;
   
   let html = '';
-  // ========== 修改：排序改用实时天数 ==========
   const sortedItems = [...mgmtData[phone].items].sort((a, b) => getRealTimeDays(a) - getRealTimeDays(b));
-  // ========== 修改结束 ==========
   
   if (sortedItems.length === 0) {
     html = '<div style="text-align:center; color:#999; font-size:12px; padding:10px;">暂无明细</div>';
@@ -457,10 +469,8 @@ function renderPhoneItems(phone) {
     sortedItems.forEach((item, index) => {
       const realIdx = mgmtData[phone].items.indexOf(item);
       const isDeleted = item.deleted;
-      // ========== 修改：到期日期用实时天数计算 ==========
       const realDays = getRealTimeDays(item);
       const expiryDate = calculateDate(realDays);
-      // ========== 修改结束 ==========
       const rowStyle = isDeleted ? 'opacity:0.5; background:#f9f9f9;' : '';
       
       let systemColor = '';
@@ -514,7 +524,7 @@ function deleteFullPhone(phone) {
 }
 
 function calculateDate(days) {
-  if (!days) return '-';
+  if (!days && days!==0) return '-';
   const date = new Date();
   date.setDate(date.getDate() + parseInt(days));
   const y = date.getFullYear().toString().slice(-2);
@@ -532,10 +542,8 @@ function updateSummary() {
     mgmtData[phone].items.forEach(it => {
       if (it.deleted) totalInvalid++;
       else {
-        totalValid++;
-        // ========== 修改：7天内到期判断用实时天数 ==========
         const d = getRealTimeDays(it);
-        // ========== 修改结束 ==========
+        totalValid++;
         if (d <= 7) {
           expiringCount++;
           expiringHtml += `<div class="expiring-card" onclick="togglePhoneDetail('${phone}')">
@@ -562,12 +570,9 @@ function showItemForm(phone, idx = -1) {
   const item = isEdit ? mgmtData[phone].items[idx] : { nickname: '', device: '', days: '', system: '', baseDate: '' };
   currentSelectedSystem = item.system || "";
   
-  // 预计算当前日期
   const today = new Date();
-  // ========== 修改：编辑时用实时天数计算到期日期 ==========
   const realDays = getRealTimeDays(item);
   const currentExpiryDate = realDays ? new Date(today.getTime() + realDays * 86400000) : today;
-  // ========== 修改结束 ==========
   const dateStr = currentExpiryDate.toISOString().split('T')[0];
 
   const formContainer = document.createElement('div');
@@ -656,16 +661,14 @@ function saveItem(phone, idx) {
   const device = document.getElementById('formDevice').value.trim();
   const days = document.getElementById('formDays').value.trim();
   if (!days) return alert('请输入天数或选择日期');
-  // ========== 修改：新增/编辑时添加基准日期 ==========
   const newItem = { 
     nickname, 
     device, 
     days, 
     system: currentSelectedSystem, 
     deleted: false,
-    baseDate: new Date().toISOString().split('T')[0] // 录入时的日期（基准）
+    baseDate: new Date().toISOString().split('T')[0]
   };
-  // ========== 修改结束 ==========
   if (idx === -1) mgmtData[phone].items.push(newItem);
   else mgmtData[phone].items[idx] = newItem;
   saveMgmtData();
@@ -676,7 +679,6 @@ function saveItem(phone, idx) {
 }
 
 const GITHUB_CONFIG = {
-  // 采用深度拆分混淆方案，绕过 GitHub 自动化安全扫描
   get token() {
     const p1 = 'ghp_3sD6pXiWSY';
     const p2 = 'R8CIQdNAeQGcE';
@@ -756,7 +758,6 @@ async function downloadFromGist(isRefresh = false) {
     const remoteMgmtData = imported.mgmtData || imported;
     const remotePhoneOrder = imported.phoneOrder || Object.keys(remoteMgmtData);
 
-    // 核对逻辑：如果下载的数据量小于本地数据量，进行提示
     const localCount = Object.keys(mgmtData).length;
     const remoteCount = Object.keys(remoteMgmtData).length;
 
