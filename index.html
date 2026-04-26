@@ -345,7 +345,14 @@ function renderMgmtGrid() {
     }
 
     // 手机号和统计之间的天数方框容器
-    const daysBoxHtml = `<div class="mgmt-card-days-container"><div class="mgmt-card-days-box ${phoneDays <= 7 ? 'warning' : ''}">${phoneDays}</div></div>`;
+      // 手机号本身的倒计时显示逻辑：少于7天显示红字+红叹号
+      let phoneDaysStyle = '';
+      let phoneDaysText = phoneDays;
+      if (phoneDays <= 7) {
+        phoneDaysStyle = 'warning'; // 使用现有的 warning 样式（红色）
+        phoneDaysText = `${phoneDays}<span style="color:red; font-weight:bold;">!</span>`;
+      }
+      const daysBoxHtml = `<div class="mgmt-card-days-container"><div class="mgmt-card-days-box ${phoneDaysStyle}">${phoneDaysText}</div></div>`;
 
     const statsHtml = `<div class="mgmt-card-stats">
       <span class="stat-win">${winCount}</span>
@@ -387,20 +394,30 @@ function renderMgmtGrid() {
         clearTimeout(longPressTimer);
         return;
       }
-      e.preventDefault();
+      // 拖拽模式下阻止默认滚动
+      if (e.cancelable) e.preventDefault();
+      
       const touch = e.touches[0];
       const target = document.elementFromPoint(touch.clientX, touch.clientY);
-      const overCard = target ? target.closest('.mgmt-card') : null;
+      if (!target) return;
       
+      const overCard = target.closest('.mgmt-card');
       if (overCard && overCard !== card) {
         const overPhone = overCard.getAttribute('data-phone');
         const currentIndex = phoneOrder.indexOf(phone);
         const targetIndex = phoneOrder.indexOf(overPhone);
         
         if (currentIndex !== -1 && targetIndex !== -1) {
+          // 交换位置
           phoneOrder.splice(currentIndex, 1);
           phoneOrder.splice(targetIndex, 0, phone);
+          // 立即重新渲染以提供视觉反馈
           renderMgmtGrid();
+          // 重新获取当前正在拖拽的卡片并保持其拖拽状态
+          const newDraggingCard = document.querySelector(`.mgmt-card[data-phone="${phone}"]`);
+          if (newDraggingCard) {
+            newDraggingCard.classList.add('dragging');
+          }
         }
       }
     }, {passive: false});
@@ -525,6 +542,12 @@ function renderPhoneItems(phone) {
       if (item.system === 'Mac') systemColor = 'color:#007bff;';
       else if (item.system === 'Win') systemColor = 'color:#dc3545;';
 
+      // 明细到期提醒：7天以内加红叹号
+      let itemDaysDisplay = `${itemDays}天`;
+      if (itemDays <= 7) {
+        itemDaysDisplay = `${itemDays}天<span style="color:red; font-weight:bold;">!</span>`;
+      }
+
       html += `
         <div class="mgmt-item-row" style="${rowStyle}">
           <div class="mgmt-item-table-wrapper">
@@ -533,7 +556,7 @@ function renderPhoneItems(phone) {
                 <td class="col-nickname" style="color:#007bff; cursor:pointer; text-align:left; padding-left:4px;" onclick="showItemForm('${phone}', ${realIdx})">${index + 1}. ${item.nickname || '未命名'}</td>
                 <td class="col-device">${item.device || '-'}</td>
                 <td class="col-system" style="${systemColor} font-weight:bold;">${item.system || '-'}</td>
-                <td class="col-days" style="color:#28a745;">${itemDays}天</td>
+                <td class="col-days" style="color:#28a745;">${itemDaysDisplay}</td>
                 <td class="col-date">${expiryDate}</td>
               </tr>
             </table>
@@ -596,20 +619,27 @@ function updateSummary() {
   let expiringHtml = '<div class="expiring-grid">';
   
   phones.forEach(phone => {
-    // 统计逻辑保持不变，但预警逻辑可以根据需求调整，这里统一使用phoneDays作为预警标准
-    const pDays = calculateRemainingDays(mgmtData[phone].expiryTimestamp);
-    
     // 计算该号码是否有有效明细
-    const hasValidItem = mgmtData[phone].items.some(it => !it.deleted);
+    const validItems = mgmtData[phone].items.filter(it => !it.deleted);
+    const hasValidItem = validItems.length > 0;
+    
     if (!hasValidItem && mgmtData[phone].items.length > 0) {
       totalInvalid++;
     } else {
       totalValid++;
-      if (pDays <= 7) {
+      
+      // 仅根据明细到期情况进行预警（7天内）
+      let minItemDays = Infinity;
+      validItems.forEach(it => {
+        const d = calculateRemainingDays(it.expiryTimestamp);
+        if (d < minItemDays) minItemDays = d;
+      });
+
+      if (minItemDays <= 7) {
         expiringCount++;
         expiringHtml += `<div class="expiring-card" onclick="togglePhoneDetail('${phone}')">
           <span class="expiring-phone">${phone}</span>
-          <span class="expiring-days">${pDays}天</span>
+          <span class="expiring-days">${minItemDays}天</span>
         </div>`;
       }
     }
