@@ -624,13 +624,12 @@ function updateSummary() {
       vacancyHtml += `
         <div class="summary-list-card" onclick="togglePhoneDetail('${phone}')">
           <span class="summary-list-phone">${phone}</span>
-          <div style="display: flex; align-items: center; gap: 6px;">
-            <span style="font-size: 11px; font-weight: bold;">
-              <span style="color: #28a745;">${freeMac}</span>/ 
-              <span style="color: #dc3545;">${freeRemoteWin}</span>/ 
+          <div style="display: flex; align-items: center; gap: 12px;">
+            <span style="font-size: 13px; font-weight: bold; display: flex; align-items: center; gap: 8px;">
+              <span style="color: #28a745;">${freeMac}</span>
+              <span style="color: #dc3545; border: 1px solid #dc3545; border-radius: 3px; padding: 0 4px; min-width: 18px; text-align: center; line-height: 1.2;">${freeRemoteWin}</span>
               <span style="color: #fd7e14;">${freeNormalWin}</span>
             </span>
-            <span style="font-size: 10px; color: #999; min-width: 30px; text-align: right; ${pDays <= 7 ? 'color:red; font-weight:bold;' : ''}">${pDays}天</span>
           </div>
         </div>`;
     }
@@ -640,9 +639,15 @@ function updateSummary() {
   document.getElementById('expiringCount_pub').innerText = `${expiringCount}个`;
   document.getElementById('expiringListContainer').innerHTML = expiringHtml + '</div>';
   
-  // 更新可用空位标题，包含分类总和
-  const vacancyTitle = `${vacancyCount}个 (M:${totalFreeMac} 远W:${totalFreeRemoteWin} W:${totalFreeNormalWin})`;
-  document.getElementById('vacancyCount_pub').innerText = vacancyTitle;
+  // 更新可用空位标题，包含分类总和，颜色同步
+  const vacancyTitle = `
+    ${vacancyCount}个 
+    <span style="font-weight: normal; font-size: 11px; margin-left: 4px;">
+      (<span style="color: #28a745;">Mac:${totalFreeMac}</span> 
+      <span style="color: #dc3545;">远程:${totalFreeRemoteWin}</span> 
+      <span style="color: #fd7e14;">Win:${totalFreeNormalWin}</span>)
+    </span>`;
+  document.getElementById('vacancyCount_pub').innerHTML = vacancyTitle;
   document.getElementById('vacancyListContainer').innerHTML = vacancyHtml + '</div>';
 }
 
